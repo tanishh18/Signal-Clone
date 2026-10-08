@@ -91,7 +91,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           {messages.length > 0 ? (
             messages.map((msg) => (
               <MessageBubble
-                key={msg.id}
+                key={msg.temp_id || msg.id}
                 message={msg}
                 isOutgoing={msg.sender_id === currentUser.id}
                 isGroup={isGroup}

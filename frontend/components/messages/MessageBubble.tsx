@@ -20,13 +20,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   isOutgoing,
   isGroup,
-  onReply,
 }) => {
-  const [timeText, setTimeText] = React.useState("");
-
-  React.useEffect(() => {
-    setTimeText(formatMessageTime(message.created_at));
-  }, [message.created_at]);
+  const timeText = formatMessageTime(message.created_at);
 
   return (
     <div
@@ -60,7 +55,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             isOutgoing ? "text-white/80" : "text-zinc-400 dark:text-zinc-500"
           }`}
         >
-          <span>{timeText}</span>
+          <span suppressHydrationWarning>{timeText}</span>
 
           {isOutgoing && (
             <span className="flex-shrink-0" title={`Status: ${message.status}`}>

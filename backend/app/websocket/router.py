@@ -128,10 +128,10 @@ async def websocket_endpoint(
             # 1. MESSAGE SEND
             # ---------------------------------------------------------
             elif event_type == "message.send":
-                conv_id = data.get("conversation_id")
-                content = str(data.get("content", "")).strip()
-                reply_to_id = data.get("reply_to_id")
-                temp_id = data.get("temp_id")
+                conv_id = data.get("conversation_id") or event.get("conversation_id")
+                content = str(data.get("content") or event.get("content") or "").strip()
+                reply_to_id = data.get("reply_to_id") or event.get("reply_to_id")
+                temp_id = data.get("temp_id") or event.get("temp_id")
 
                 if not conv_id or not content:
                     await websocket.send_text(json.dumps({

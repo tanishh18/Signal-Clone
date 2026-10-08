@@ -37,14 +37,10 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   currentUserId,
   onClick,
 }) => {
-  const [timeText, setTimeText] = React.useState("");
   const isGroup = conversation.type === "group";
   const latest = conversation.latest_message;
+  const timeText = formatConversationTime(latest?.created_at || conversation.updated_at);
   const isOutgoing = latest?.sender_id === currentUserId;
-
-  React.useEffect(() => {
-    setTimeText(formatConversationTime(latest?.created_at || conversation.updated_at));
-  }, [latest?.created_at, conversation.updated_at]);
 
   // Determine online state: for direct chats, check other member's online state
   const otherMember = conversation.members.find((m) => m.user_id !== currentUserId);
@@ -78,7 +74,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           >
             {conversation.name || "Conversation"}
           </span>
-          <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal ml-2 flex-shrink-0">
+          <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal ml-2 flex-shrink-0" suppressHydrationWarning>
             {timeText}
           </span>
         </div>

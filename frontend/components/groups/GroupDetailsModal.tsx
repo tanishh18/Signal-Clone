@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Conversation, User } from "@/types";
 import { Avatar } from "@/components/ui/Avatar";
-import { X, Users, UserPlus, Shield, UserMinus } from "lucide-react";
+import { X, UserPlus, Shield, UserMinus } from "lucide-react";
 
 interface GroupDetailsModalProps {
   isOpen: boolean;
