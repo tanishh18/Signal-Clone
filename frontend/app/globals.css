@@ -1,26 +1,62 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --signal-ultramarine: #2c6bed;
+  --signal-ultramarine-hover: #2259c7;
+  --signal-bg: #ffffff;
+  --signal-sidebar: #f8f9fa;
+  --signal-surface: #ffffff;
+  --signal-surface-hover: #f1f3f5;
+  --signal-border: #e9ecef;
+  --signal-text-primary: #111827;
+  --signal-text-secondary: #6b7280;
+  --signal-text-muted: #9ca3af;
+  --signal-bubble-incoming: #f1f3f5;
+  --signal-bubble-incoming-text: #111827;
+  --signal-bubble-outgoing: #2c6bed;
+  --signal-bubble-outgoing-text: #ffffff;
+  --signal-online: #10b981;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --signal-ultramarine: #2c6bed;
+  --signal-ultramarine-hover: #3b76f6;
+  --signal-bg: #121212;
+  --signal-sidebar: #181818;
+  --signal-surface: #1e1e1e;
+  --signal-surface-hover: #282828;
+  --signal-border: #2c2c2e;
+  --signal-text-primary: #f3f4f6;
+  --signal-text-secondary: #9ca3af;
+  --signal-text-muted: #6b7280;
+  --signal-bubble-incoming: #282828;
+  --signal-bubble-incoming-text: #f3f4f6;
+  --signal-bubble-outgoing: #2c6bed;
+  --signal-bubble-outgoing-text: #ffffff;
+  --signal-online: #10b981;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Subtle, calm Signal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+  overflow: hidden;
 }
