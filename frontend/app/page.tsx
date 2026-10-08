@@ -8,8 +8,10 @@ import { ChatWindow } from "@/components/chat/ChatWindow";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { GroupDetailsModal } from "@/components/groups/GroupDetailsModal";
 import { NewChatModal } from "@/components/chat/NewChatModal";
+import { NewGroupModal } from "@/components/groups/NewGroupModal";
 import {
   getConversations,
+  getConversationDetails,
   getConversationMessages,
   sendRestMessage,
   markConversationAsRead,
@@ -31,14 +33,20 @@ function MessengerApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [isNewGroupOpen, setIsNewGroupOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const selectedIdRef = useRef<number | null>(selectedId);
+  const conversationsRef = useRef<Conversation[]>(conversations);
   const typingReceiverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   // Synchronize dark theme class with html element
   useEffect(() => {
@@ -250,6 +258,24 @@ function MessengerApp() {
         const isCurrentActive = activeId === newMsg.conversation_id;
         const isFromSelf = newMsg.sender_id === currentUser.id;
 
+        const exists = prev.some((c) => c.id === newMsg.conversation_id);
+        if (!exists) {
+          getConversationDetails(newMsg.conversation_id)
+            .then((newConv) => {
+              setConversations((curr) => {
+                if (curr.some((c) => c.id === newConv.id)) return curr;
+                const newEntry: Conversation = {
+                  ...newConv,
+                  latest_message: newMsg,
+                  unread_count: isCurrentActive || isFromSelf ? 0 : 1,
+                  updated_at: newMsg.created_at,
+                };
+                return [newEntry, ...curr];
+              });
+            })
+            .catch(() => {});
+        }
+
         const updated = prev.map((c) => {
           if (c.id === newMsg.conversation_id) {
             return {
@@ -315,10 +341,12 @@ function MessengerApp() {
         const { conversation_id, reader_id, read_at } = data;
         const activeId = selectedIdRef.current;
 
-        // Update active messages sent by current user to 'read'
+        // Update active messages sent by current user to 'read' (for direct conversations)
+        // or record the per-user read receipt (for group conversations)
         if (conversation_id === activeId) {
-          setMessages((prev) =>
-            prev.map((m) => {
+          setMessages((prev) => {
+            const isGroupConv = conversationsRef.current.find((c) => c.id === conversation_id)?.type === "group";
+            return prev.map((m) => {
               if (m.sender_id === currentUser.id) {
                 const alreadyRead = m.reads?.some((r) => r.user_id === reader_id);
                 const updatedReads = alreadyRead
@@ -326,22 +354,23 @@ function MessengerApp() {
                   : [...(m.reads || []), { user_id: reader_id, read_at }];
                 return {
                   ...m,
-                  status: "read",
+                  status: isGroupConv ? m.status : "read",
                   reads: updatedReads,
                 };
               }
               return m;
-            })
-          );
+            });
+          });
         }
 
         // Update conversation sidebar preview and reset reader unread count
-        setConversations((prev) =>
-          prev.map((c) => {
+        setConversations((prev) => {
+          const isGroupConv = prev.find((c) => c.id === conversation_id)?.type === "group";
+          return prev.map((c) => {
             if (c.id === conversation_id) {
               const isReaderSelf = reader_id === currentUser.id;
               let updatedLatest = c.latest_message;
-              if (updatedLatest && updatedLatest.sender_id === currentUser.id) {
+              if (updatedLatest && updatedLatest.sender_id === currentUser.id && !isGroupConv) {
                 updatedLatest = { ...updatedLatest, status: "read" };
               }
               return {
@@ -351,8 +380,8 @@ function MessengerApp() {
               };
             }
             return c;
-          })
-        );
+          });
+        });
       }
     );
 
@@ -589,7 +618,7 @@ function MessengerApp() {
             onSelectConversation={handleSelectConversation}
             onOpenSettings={() => setIsSettingsOpen(true)}
             onNewChat={() => setIsNewChatOpen(true)}
-            onNewGroup={() => showNotice("Group creation available in Phase 10")}
+            onNewGroup={() => setIsNewGroupOpen(true)}
           />
         </div>
 
@@ -622,6 +651,14 @@ function MessengerApp() {
         onConversationCreated={handleConversationCreated}
       />
 
+      {/* New Group Modal */}
+      <NewGroupModal
+        isOpen={isNewGroupOpen}
+        currentUser={currentUser}
+        onClose={() => setIsNewGroupOpen(false)}
+        onGroupCreated={handleConversationCreated}
+      />
+
       {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -638,6 +675,22 @@ function MessengerApp() {
         conversation={activeConversation}
         currentUser={currentUser}
         onClose={() => setIsDetailsOpen(false)}
+        onMembersUpdated={(updatedMembers) => {
+          if (activeConversation) {
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.id === activeConversation.id ? { ...c, members: updatedMembers } : c
+              )
+            );
+          }
+        }}
+        onLeaveGroup={(convId) => {
+          setConversations((prev) => prev.filter((c) => c.id !== convId));
+          if (selectedId === convId) {
+            setSelectedId(null);
+          }
+          showNotice("You left the group");
+        }}
       />
     </main>
   );

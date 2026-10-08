@@ -2,6 +2,7 @@ import { getStoredToken, removeStoredToken } from "./auth";
 import {
   User,
   Conversation,
+  ConversationMember,
   Message,
   Contact,
 } from "@/types";
@@ -219,5 +220,50 @@ export async function searchUsers(query: string): Promise<User[]> {
 export async function getContacts(): Promise<Contact[]> {
   return apiRequest<Contact[]>("/contacts", {
     method: "GET",
+  });
+}
+
+// --- Groups Management APIs ---
+
+export async function createGroup(
+  name: string,
+  memberIds: number[],
+  avatarUrl?: string | null
+): Promise<Conversation> {
+  return apiRequest<Conversation>("/groups", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      member_ids: memberIds,
+      avatar_url: avatarUrl || null,
+    }),
+  });
+}
+
+export async function getGroupMembers(
+  groupId: number
+): Promise<ConversationMember[]> {
+  return apiRequest<ConversationMember[]>(`/groups/${groupId}/members`, {
+    method: "GET",
+  });
+}
+
+export async function addGroupMember(
+  groupId: number,
+  userId: number,
+  role: "admin" | "member" = "member"
+): Promise<ConversationMember> {
+  return apiRequest<ConversationMember>(`/groups/${groupId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, role }),
+  });
+}
+
+export async function removeGroupMember(
+  groupId: number,
+  userId: number
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/groups/${groupId}/members/${userId}`, {
+    method: "DELETE",
   });
 }
