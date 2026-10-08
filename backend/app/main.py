@@ -1,11 +1,24 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+from app.database import init_db
 
-app = FastAPI(title="Signal Clone API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize database tables on startup
+    init_db()
+    yield
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -13,4 +26,8 @@ app.add_middleware(
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "app": "Signal Clone API"}
+    return {
+        "status": "ok",
+        "app": settings.PROJECT_NAME,
+        "version": settings.VERSION
+    }
