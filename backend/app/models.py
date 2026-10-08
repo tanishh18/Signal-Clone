@@ -15,6 +15,9 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+# Convention: SQLite lacks native timezone-aware DATETIME types.
+# All timestamps are generated and stored in UTC using datetime.now(timezone.utc).
+# The frontend converts UTC timestamps to the user's local timezone for presentation.
 def utc_now():
     return datetime.now(timezone.utc)
 
@@ -127,7 +130,11 @@ class Message(Base):
     sender_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     content = Column(Text, nullable=False)
     message_type = Column(String(20), nullable=False, default="text")  # "text", "image", "system"
-    status = Column(String(20), nullable=False, default="sent")  # "sending", "sent", "delivered", "read"
+    # Message status: represents the sender-side lifecycle ("sending", "sent", "delivered", "read").
+    # In direct chat, status transitions to "read" when the other party reads it.
+    # In group chat, messages.status remains "sent"/"delivered", while individual per-recipient
+    # read receipts are tracked through the message_reads table below.
+    status = Column(String(20), nullable=False, default="sent")
     reply_to_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)

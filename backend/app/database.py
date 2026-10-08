@@ -13,7 +13,7 @@ engine = create_engine(
     echo=False
 )
 
-# Configure SQLite for high concurrency, foreign key integrity, and timeout safety
+# Configure SQLite: WAL improves SQLite read/write concurrency, while busy_timeout helps handle transient database locks
 @event.listens_for(engine, "connect")
 def configure_sqlite_connection(dbapi_connection, connection_record):
     if settings.DATABASE_URL.startswith("sqlite"):
