@@ -33,6 +33,8 @@ function MessengerApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [newChatTab, setNewChatTab] = useState<"contacts" | "search">("contacts");
+  const [newChatInitialQuery, setNewChatInitialQuery] = useState("");
   const [isNewGroupOpen, setIsNewGroupOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -567,6 +569,24 @@ function MessengerApp() {
     handleSelectConversation(conv.id);
   };
 
+  const handleOpenContacts = () => {
+    setNewChatTab("contacts");
+    setNewChatInitialQuery("");
+    setIsNewChatOpen(true);
+  };
+
+  const handleOpenNewChat = () => {
+    setNewChatTab("search");
+    setNewChatInitialQuery("");
+    setIsNewChatOpen(true);
+  };
+
+  const handleGlobalSearch = (q: string) => {
+    setNewChatTab("search");
+    setNewChatInitialQuery(q);
+    setIsNewChatOpen(true);
+  };
+
   // Loading screen during initial authentication check
   if (authLoading) {
     return (
@@ -617,8 +637,10 @@ function MessengerApp() {
             selectedId={selectedId}
             onSelectConversation={handleSelectConversation}
             onOpenSettings={() => setIsSettingsOpen(true)}
-            onNewChat={() => setIsNewChatOpen(true)}
+            onNewChat={handleOpenNewChat}
             onNewGroup={() => setIsNewGroupOpen(true)}
+            onOpenContacts={handleOpenContacts}
+            onGlobalSearch={handleGlobalSearch}
           />
         </div>
 
@@ -643,10 +665,13 @@ function MessengerApp() {
         </div>
       </div>
 
-      {/* New Direct Chat Modal */}
+      {/* New Direct Chat / Contacts Modal */}
       <NewChatModal
+        key={`${newChatTab}-${newChatInitialQuery}-${isNewChatOpen}`}
         isOpen={isNewChatOpen}
         currentUser={currentUser}
+        initialTab={newChatTab}
+        initialSearchQuery={newChatInitialQuery}
         onClose={() => setIsNewChatOpen(false)}
         onConversationCreated={handleConversationCreated}
       />

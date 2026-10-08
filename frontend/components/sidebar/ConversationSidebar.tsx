@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Conversation, User } from "@/types";
 import { ConversationItem } from "./ConversationItem";
 import { Avatar } from "@/components/ui/Avatar";
-import { Search, X, Settings, Plus, ShieldCheck, Users } from "lucide-react";
+import { Search, X, Settings, Plus, ShieldCheck, Users, BookUser } from "lucide-react";
 
 interface ConversationSidebarProps {
   currentUser: User;
@@ -14,6 +14,8 @@ interface ConversationSidebarProps {
   onOpenSettings: () => void;
   onNewChat: () => void;
   onNewGroup: () => void;
+  onOpenContacts?: () => void;
+  onGlobalSearch?: (query: string) => void;
 }
 
 export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
@@ -24,6 +26,8 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   onOpenSettings,
   onNewChat,
   onNewGroup,
+  onOpenContacts,
+  onGlobalSearch,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -67,6 +71,16 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
         </div>
 
         <div className="flex items-center gap-1 text-zinc-600 dark:text-zinc-300">
+          {onOpenContacts && (
+            <button
+              onClick={onOpenContacts}
+              className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100"
+              title="Contacts & People"
+              aria-label="View Contacts"
+            >
+              <BookUser className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={onNewGroup}
             className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100"
@@ -116,6 +130,15 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             </button>
           )}
         </div>
+        {searchQuery.trim() && onGlobalSearch && (
+          <button
+            onClick={() => onGlobalSearch(searchQuery.trim())}
+            className="w-full mt-2 text-left text-xs text-[#2C6BED] hover:underline flex items-center gap-1.5 px-1 py-0.5 font-medium transition-colors"
+          >
+            <Search className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">Search Signal users for &quot;{searchQuery.trim()}&quot;</span>
+          </button>
+        )}
       </div>
 
       {/* Conversations List */}

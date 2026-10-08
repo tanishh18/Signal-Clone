@@ -223,6 +223,27 @@ export async function getContacts(): Promise<Contact[]> {
   });
 }
 
+export async function addContact(
+  contactId: number,
+  nickname?: string
+): Promise<Contact> {
+  return apiRequest<Contact>("/contacts", {
+    method: "POST",
+    body: JSON.stringify({
+      contact_id: contactId,
+      nickname: nickname || null,
+    }),
+  });
+}
+
+export async function deleteContact(
+  contactId: number
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/contacts/${contactId}`, {
+    method: "DELETE",
+  });
+}
+
 // --- Groups Management APIs ---
 
 export async function createGroup(
