@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Message } from "@/types";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Clock } from "lucide-react";
 
 interface MessageBubbleProps {
   message: Message;
@@ -58,9 +58,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           <span suppressHydrationWarning>{timeText}</span>
 
           {isOutgoing && (
-            <span className="flex-shrink-0" title={`Status: ${message.status}`}>
-              {message.status === "read" ? (
-                <CheckCheck className="w-3.5 h-3.5 text-white" />
+            <span className="flex-shrink-0 flex items-center" title={`Status: ${message.status}`}>
+              {message.status === "sending" ? (
+                <Clock className="w-3 h-3 text-white/60 animate-pulse" />
+              ) : message.status === "read" ? (
+                <CheckCheck className="w-3.5 h-3.5 text-[#93c5fd] drop-shadow-xs" />
               ) : message.status === "delivered" ? (
                 <CheckCheck className="w-3.5 h-3.5 text-white/90" />
               ) : (

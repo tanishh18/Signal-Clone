@@ -196,6 +196,17 @@ export async function sendRestMessage(
   });
 }
 
+export async function markConversationAsRead(
+  conversationId: number
+): Promise<{ conversation_id: number; marked_count: number; status: string }> {
+  return apiRequest<{ conversation_id: number; marked_count: number; status: string }>(
+    `/conversations/${conversationId}/read`,
+    {
+      method: "POST",
+    }
+  );
+}
+
 // --- Users & Contacts APIs ---
 
 export async function searchUsers(query: string): Promise<User[]> {

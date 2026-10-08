@@ -15,6 +15,8 @@ interface ChatWindowProps {
   isTyping?: boolean;
   typingUser?: string;
   onSendMessage: (content: string) => void;
+  onTypingStart?: () => void;
+  onTypingStop?: () => void;
   onBack: () => void;
   onOpenDetails: () => void;
 }
@@ -26,6 +28,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   isTyping = false,
   typingUser,
   onSendMessage,
+  onTypingStart,
+  onTypingStop,
   onBack,
   onOpenDetails,
 }) => {
@@ -112,7 +116,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       </div>
 
       {/* Pinned Message Composer */}
-      <MessageComposer onSendMessage={onSendMessage} />
+      <MessageComposer
+        onSendMessage={onSendMessage}
+        onTypingStart={onTypingStart}
+        onTypingStop={onTypingStop}
+      />
     </section>
   );
 };

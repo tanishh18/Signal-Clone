@@ -1,24 +1,76 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Paperclip } from "lucide-react";
 
 interface MessageComposerProps {
   onSendMessage: (content: string) => void;
+  onTypingStart?: () => void;
+  onTypingStop?: () => void;
   disabled?: boolean;
 }
 
 export const MessageComposer: React.FC<MessageComposerProps> = ({
   onSendMessage,
+  onTypingStart,
+  onTypingStop,
   disabled = false,
 }) => {
   const [content, setContent] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isTypingRef = useRef<boolean>(false);
+  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopTyping = useCallback(() => {
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      onTypingStop?.();
+    }
+  }, [onTypingStop]);
+
+  // Cleanup typing when unmounting or disabled
+  useEffect(() => {
+    return () => {
+      stopTyping();
+    };
+  }, [stopTyping]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setContent(val);
+
+    if (val.trim().length > 0) {
+      // First character: trigger typing.start
+      if (!isTypingRef.current) {
+        isTypingRef.current = true;
+        onTypingStart?.();
+      }
+
+      // Reset debounce inactivity timer (2.5s)
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+      typingTimerRef.current = setTimeout(() => {
+        stopTyping();
+      }, 2500);
+    } else {
+      // Input cleared
+      stopTyping();
+    }
+  };
 
   const handleSend = () => {
     const trimmed = content.trim();
     if (!trimmed || disabled) return;
+
+    // Immediately stop typing indicator on send
+    stopTyping();
+
     onSendMessage(trimmed);
     setContent("");
     if (textareaRef.current) {
@@ -68,7 +120,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Signal message"
           rows={1}

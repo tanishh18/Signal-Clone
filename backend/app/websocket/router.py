@@ -224,7 +224,7 @@ async def websocket_endpoint(
             # 2. TYPING INDICATORS
             # ---------------------------------------------------------
             elif event_type in ("typing.start", "typing.stop"):
-                conv_id = data.get("conversation_id")
+                conv_id = data.get("conversation_id") or event.get("conversation_id")
                 if not conv_id:
                     continue
 
@@ -254,7 +254,7 @@ async def websocket_endpoint(
             # 3. MESSAGE READ RECEIPT
             # ---------------------------------------------------------
             elif event_type == "message.read":
-                conv_id = data.get("conversation_id")
+                conv_id = data.get("conversation_id") or event.get("conversation_id")
                 if not conv_id:
                     continue
 
@@ -311,8 +311,8 @@ async def websocket_endpoint(
             # 4. MESSAGE DELIVERED
             # ---------------------------------------------------------
             elif event_type == "message.delivered":
-                conv_id = data.get("conversation_id")
-                msg_id = data.get("message_id")
+                conv_id = data.get("conversation_id") or event.get("conversation_id")
+                msg_id = data.get("message_id") or event.get("message_id")
                 if not conv_id or not msg_id:
                     continue
 

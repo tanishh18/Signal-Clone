@@ -12,6 +12,7 @@ import {
   getConversations,
   getConversationMessages,
   sendRestMessage,
+  markConversationAsRead,
 } from "@/lib/api";
 import { signalWs } from "@/lib/websocket";
 import { Conversation, Message } from "@/types";
@@ -24,6 +25,8 @@ function MessengerApp() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUser, setTypingUser] = useState<string | undefined>(undefined);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -31,6 +34,8 @@ function MessengerApp() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const selectedIdRef = useRef<number | null>(selectedId);
+  const typingReceiverTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
@@ -127,13 +132,87 @@ function MessengerApp() {
     };
   }, [selectedId, currentUser]);
 
-  // Listen to WebSocket events (message.created, user.online, user.offline)
+  // Handle switching / selecting conversations
+  const handleSelectConversation = (id: number) => {
+    // Clear typing state from previous conversation immediately
+    setIsTyping(false);
+    setTypingUser(undefined);
+    if (typingReceiverTimerRef.current) {
+      clearTimeout(typingReceiverTimerRef.current);
+      typingReceiverTimerRef.current = null;
+    }
+
+    setSelectedId(id);
+
+    // Clear local unread count
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c))
+    );
+
+    // Emit read receipt via WebSocket and REST API
+    signalWs.send("message.read", { conversation_id: id });
+    markConversationAsRead(id).catch(() => {});
+  };
+
+  // Reconnection and real-time state recovery
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubStatus = signalWs.onStatusChange((status) => {
+      if (status === "connected") {
+        // Reset receiver typing state on reconnect
+        setIsTyping(false);
+        setTypingUser(undefined);
+
+        // Catch up on conversations list
+        getConversations().then((data) => setConversations(data)).catch(() => {});
+
+        // If in active conversation, refresh message history to recover any missed events
+        const currentActiveId = selectedIdRef.current;
+        if (currentActiveId) {
+          getConversationMessages(currentActiveId)
+            .then((history) => {
+              setMessages((current) => {
+                const map = new Map<number, Message>();
+                history.forEach((m) => map.set(m.id, m));
+                current.forEach((m) => {
+                  if (!map.has(m.id)) map.set(m.id, m);
+                });
+                return Array.from(map.values()).sort(
+                  (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                );
+              });
+            })
+            .catch(() => {});
+        }
+      } else if (status === "disconnected" || status === "error") {
+        // Clear typing indicator on disconnect
+        setIsTyping(false);
+        setTypingUser(undefined);
+      }
+    });
+
+    return () => {
+      unsubStatus();
+    };
+  }, [currentUser]);
+
+  // Listen to WebSocket events (message.created, message.delivered, message.read, typing, presence)
   useEffect(() => {
     if (!currentUser) return;
 
     // 1. New message created
     const unsubMsgCreated = signalWs.on("message.created", (newMsg: Message) => {
       const activeId = selectedIdRef.current;
+      const isFromOther = newMsg.sender_id !== currentUser.id;
+
+      // If received from another user, send delivery receipt
+      if (isFromOther) {
+        signalWs.send("message.delivered", {
+          conversation_id: newMsg.conversation_id,
+          message_id: newMsg.id,
+        });
+      }
 
       // Update message thread if it belongs to currently active conversation
       if (activeId === newMsg.conversation_id) {
@@ -149,6 +228,14 @@ function MessengerApp() {
           // Append new incoming message
           return [...prev, newMsg];
         });
+
+        // If conversation is open and message is from another party, mark as read immediately
+        if (isFromOther) {
+          signalWs.send("message.read", {
+            conversation_id: newMsg.conversation_id,
+          });
+          markConversationAsRead(newMsg.conversation_id).catch(() => {});
+        }
       }
 
       // Update conversation preview and ordering in sidebar
@@ -182,7 +269,142 @@ function MessengerApp() {
       });
     });
 
-    // 2. Real-time presence updates: user.online
+    // 2. Message delivered confirmation
+    const unsubDelivered = signalWs.on(
+      "message.delivered",
+      (data: { conversation_id: number; message_id: number; user_id: number }) => {
+        const { conversation_id, message_id } = data;
+        const activeId = selectedIdRef.current;
+
+        // If active conversation, update message status to delivered
+        if (conversation_id === activeId) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === message_id && (m.status === "sent" || m.status === "sending")
+                ? { ...m, status: "delivered" }
+                : m
+            )
+          );
+        }
+
+        // Update latest message in sidebar if matching
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === conversation_id &&
+            c.latest_message?.id === message_id &&
+            (c.latest_message.status === "sent" || c.latest_message.status === "sending")
+              ? {
+                  ...c,
+                  latest_message: { ...c.latest_message, status: "delivered" },
+                }
+              : c
+          )
+        );
+      }
+    );
+
+    // 3. Message read confirmation
+    const unsubRead = signalWs.on(
+      "message.read",
+      (data: {
+        conversation_id: number;
+        reader_id: number;
+        read_at: string;
+        marked_count: number;
+      }) => {
+        const { conversation_id, reader_id, read_at } = data;
+        const activeId = selectedIdRef.current;
+
+        // Update active messages sent by current user to 'read'
+        if (conversation_id === activeId) {
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.sender_id === currentUser.id) {
+                const alreadyRead = m.reads?.some((r) => r.user_id === reader_id);
+                const updatedReads = alreadyRead
+                  ? m.reads
+                  : [...(m.reads || []), { user_id: reader_id, read_at }];
+                return {
+                  ...m,
+                  status: "read",
+                  reads: updatedReads,
+                };
+              }
+              return m;
+            })
+          );
+        }
+
+        // Update conversation sidebar preview and reset reader unread count
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id === conversation_id) {
+              const isReaderSelf = reader_id === currentUser.id;
+              let updatedLatest = c.latest_message;
+              if (updatedLatest && updatedLatest.sender_id === currentUser.id) {
+                updatedLatest = { ...updatedLatest, status: "read" };
+              }
+              return {
+                ...c,
+                unread_count: isReaderSelf ? 0 : c.unread_count,
+                latest_message: updatedLatest,
+              };
+            }
+            return c;
+          })
+        );
+      }
+    );
+
+    // 4. Real-time typing indicators: typing.start
+    const unsubTypingStart = signalWs.on(
+      "typing.start",
+      (data: {
+        conversation_id: number;
+        user_id: number;
+        username: string;
+        display_name: string;
+      }) => {
+        const activeId = selectedIdRef.current;
+        if (data.conversation_id === activeId && data.user_id !== currentUser.id) {
+          setIsTyping(true);
+          setTypingUser(data.display_name || data.username || "Someone");
+
+          // Reset defensive receiver timeout (3.5s) to auto-clear typing if stop event dropped
+          if (typingReceiverTimerRef.current) {
+            clearTimeout(typingReceiverTimerRef.current);
+          }
+          typingReceiverTimerRef.current = setTimeout(() => {
+            setIsTyping(false);
+            setTypingUser(undefined);
+            typingReceiverTimerRef.current = null;
+          }, 3500);
+        }
+      }
+    );
+
+    // 5. Real-time typing indicators: typing.stop
+    const unsubTypingStop = signalWs.on(
+      "typing.stop",
+      (data: {
+        conversation_id: number;
+        user_id: number;
+        username: string;
+        display_name: string;
+      }) => {
+        const activeId = selectedIdRef.current;
+        if (data.conversation_id === activeId && data.user_id !== currentUser.id) {
+          setIsTyping(false);
+          setTypingUser(undefined);
+          if (typingReceiverTimerRef.current) {
+            clearTimeout(typingReceiverTimerRef.current);
+            typingReceiverTimerRef.current = null;
+          }
+        }
+      }
+    );
+
+    // 6. Real-time presence updates: user.online
     const unsubUserOnline = signalWs.on("user.online", (data: { user_id: number }) => {
       setConversations((prev) =>
         prev.map((c) => ({
@@ -196,7 +418,7 @@ function MessengerApp() {
       );
     });
 
-    // 3. Real-time presence updates: user.offline
+    // 7. Real-time presence updates: user.offline
     const unsubUserOffline = signalWs.on(
       "user.offline",
       (data: { user_id: number; last_seen?: string }) => {
@@ -222,10 +444,25 @@ function MessengerApp() {
 
     return () => {
       unsubMsgCreated();
+      unsubDelivered();
+      unsubRead();
+      unsubTypingStart();
+      unsubTypingStop();
       unsubUserOnline();
       unsubUserOffline();
     };
   }, [currentUser]);
+
+  // Typing event triggers for MessageComposer
+  const handleTypingStart = () => {
+    if (!selectedIdRef.current) return;
+    signalWs.send("typing.start", { conversation_id: selectedIdRef.current });
+  };
+
+  const handleTypingStop = () => {
+    if (!selectedIdRef.current) return;
+    signalWs.send("typing.stop", { conversation_id: selectedIdRef.current });
+  };
 
   // Sending a message
   const handleSendMessage = async (content: string) => {
@@ -280,7 +517,7 @@ function MessengerApp() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Failed to send message";
         showNotice(msg);
-        // Mark message as failed in UI if needed
+        // Mark message as sent in UI
         setMessages((prev) =>
           prev.map((m) =>
             m.temp_id === tempId ? { ...m, status: "sent" } : m
@@ -298,7 +535,7 @@ function MessengerApp() {
       }
       return [conv, ...prev];
     });
-    setSelectedId(conv.id);
+    handleSelectConversation(conv.id);
   };
 
   // Loading screen during initial authentication check
@@ -349,12 +586,7 @@ function MessengerApp() {
             currentUser={currentUser}
             conversations={conversations}
             selectedId={selectedId}
-            onSelectConversation={(id) => {
-              setSelectedId(id);
-              setConversations((prev) =>
-                prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c))
-              );
-            }}
+            onSelectConversation={handleSelectConversation}
             onOpenSettings={() => setIsSettingsOpen(true)}
             onNewChat={() => setIsNewChatOpen(true)}
             onNewGroup={() => showNotice("Group creation available in Phase 10")}
@@ -371,7 +603,11 @@ function MessengerApp() {
             conversation={activeConversation}
             messages={messages}
             currentUser={currentUser}
+            isTyping={isTyping}
+            typingUser={typingUser}
             onSendMessage={handleSendMessage}
+            onTypingStart={handleTypingStart}
+            onTypingStop={handleTypingStop}
             onBack={() => setSelectedId(null)}
             onOpenDetails={() => setIsDetailsOpen(true)}
           />
