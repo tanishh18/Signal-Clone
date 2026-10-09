@@ -45,6 +45,8 @@ export interface Message {
   sender?: User | null;
   reads?: MessageRead[];
   temp_id?: string;
+  is_pinned?: boolean;
+  reactions?: { emoji: string; user_id: number; count?: number; users?: number[] }[];
 }
 
 export interface Conversation {

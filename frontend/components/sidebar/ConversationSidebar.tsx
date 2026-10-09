@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { Conversation, User } from "@/types";
 import { ConversationItem } from "./ConversationItem";
-import { Avatar } from "@/components/ui/Avatar";
-import { Search, X, Plus, ShieldCheck, Users, BookUser } from "lucide-react";
+import { ChatsHeaderMenu } from "./ChatsHeaderMenu";
+import { Search, X, Edit3, MoreHorizontal, Users, BookUser } from "lucide-react";
 
 interface ConversationSidebarProps {
   currentUser: User;
@@ -23,13 +23,19 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   conversations,
   selectedId,
   onSelectConversation,
-  onOpenSettings,
   onNewChat,
   onNewGroup,
   onOpenContacts,
   onGlobalSearch,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [toastNotice, setToastNotice] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastNotice(msg);
+    setTimeout(() => setToastNotice(null), 2500);
+  };
 
   const filteredConversations = conversations.filter((c) => {
     if (!searchQuery.trim()) return true;
@@ -40,82 +46,88 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   });
 
   return (
-    <aside className="w-full md:w-[320px] lg:w-[360px] h-full flex flex-col bg-white dark:bg-[#181818] border-r border-zinc-200 dark:border-[#282828] select-none flex-shrink-0">
-      {/* Top Header */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100 dark:border-[#242424]">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onOpenSettings}
-            className="rounded-full ring-2 ring-transparent hover:ring-[#2C6BED]/40 transition-all focus:outline-none"
-            title="Profile & Settings"
-            aria-label="Profile and Settings"
-          >
-            <Avatar
-              name={currentUser.display_name}
-              src={currentUser.avatar_url}
-              size="md"
-              isOnline={currentUser.is_online}
-            />
-          </button>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-base tracking-tight text-zinc-900 dark:text-zinc-100">
-                Signal
-              </span>
-              <ShieldCheck className="w-4 h-4 text-[#2C6BED]" />
-            </div>
-            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">
-              {currentUser.display_name}
-            </p>
-          </div>
+    <aside className="w-full md:w-[320px] lg:w-[360px] h-full flex flex-col bg-[#181818] border-r border-[#242424] select-none flex-shrink-0 relative">
+      {/* Toast Notice */}
+      {toastNotice && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-full shadow-lg z-50 pointer-events-none">
+          {toastNotice}
         </div>
+      )}
 
-        <div className="flex items-center gap-0.5 text-zinc-600 dark:text-zinc-300">
+      {/* Top Header matching Screenshot 3: Chats [Compose] [...] */}
+      <div className="px-4 py-3.5 flex items-center justify-between border-b border-[#242424] relative">
+        <h1 className="text-xl font-bold tracking-tight text-white">Chats</h1>
+
+        <div className="flex items-center gap-1 text-zinc-300">
+          {/* Contacts access */}
           {onOpenContacts && (
             <button
               onClick={onOpenContacts}
-              className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100"
+              className="p-1.5 rounded-lg hover:bg-[#282828] transition-colors text-zinc-400 hover:text-white"
               title="Contacts & People"
               aria-label="View Contacts"
             >
               <BookUser className="w-[18px] h-[18px]" />
             </button>
           )}
+
+          {/* New Group button */}
           <button
             onClick={onNewGroup}
-            className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100"
+            className="p-1.5 rounded-lg hover:bg-[#282828] transition-colors text-zinc-400 hover:text-white"
             title="New Group"
-            aria-label="Create new group"
+            aria-label="Create group"
           >
             <Users className="w-[18px] h-[18px]" />
           </button>
+
+          {/* Compose / New Chat button (Pencil icon from Screenshot 3) */}
           <button
             onClick={onNewChat}
-            className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100"
-            title="New Message"
-            aria-label="Start new conversation"
+            className="p-1.5 rounded-lg hover:bg-[#282828] transition-colors text-zinc-400 hover:text-white"
+            title="Compose new message"
+            aria-label="Compose new message"
           >
-            <Plus className="w-[18px] h-[18px]" />
+            <Edit3 className="w-[18px] h-[18px]" />
+          </button>
+
+          {/* More options button (...) */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-1.5 rounded-lg hover:bg-[#282828] transition-colors text-zinc-400 hover:text-white"
+            title="More options"
+            aria-label="More options"
+          >
+            <MoreHorizontal className="w-[18px] h-[18px]" />
           </button>
         </div>
+
+        {/* 3-Dot Dropdown Menu */}
+        <ChatsHeaderMenu
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          onViewArchive={() => showToast("Archive is empty")}
+          onAddFolder={() => showToast("Chat folders coming soon")}
+          onNotificationProfile={() => showToast("Notification profiles coming soon")}
+        />
       </div>
 
-      {/* Search Bar */}
-      <div className="px-3 py-2">
-        <div className="relative flex items-center bg-zinc-100 dark:bg-[#222222] rounded-xl px-3 py-[7px] focus-within:ring-1 focus-within:ring-[#2C6BED]">
+      {/* Search Bar matching Screenshot 3 */}
+      <div className="px-3.5 py-2.5">
+        <div className="relative flex items-center bg-[#242424] rounded-xl px-3 py-1.5 focus-within:ring-1 focus-within:ring-[#2C6BED]">
           <Search className="w-4 h-4 text-zinc-400 mr-2 flex-shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search"
-            className="w-full bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
-            aria-label="Search conversations"
+            className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none"
+            aria-label="Search"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              className="text-zinc-400 hover:text-zinc-200"
               aria-label="Clear search"
             >
               <X className="w-3.5 h-3.5" />
@@ -146,15 +158,14 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             />
           ))
         ) : (
-          <div className="py-12 px-6 text-center text-zinc-400 dark:text-zinc-500">
-            <Search className="w-8 h-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-              {searchQuery ? "No conversations found" : "No chats yet"}
+          <div className="py-20 px-6 text-center text-zinc-500">
+            <p className="text-sm font-medium text-zinc-400">
+              {searchQuery ? "No chats found" : "No chats"}
             </p>
-            <p className="text-xs mt-1">
+            <p className="text-xs mt-1 text-zinc-500">
               {searchQuery
                 ? `No results for "${searchQuery}"`
-                : "Tap the + button above to start a new conversation."}
+                : "Recent chats will appear here."}
             </p>
           </div>
         )}

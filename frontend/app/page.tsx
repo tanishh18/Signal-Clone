@@ -5,6 +5,8 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { LoginView } from "@/components/auth/LoginView";
 import { ConversationSidebar } from "@/components/sidebar/ConversationSidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
+import { NavigationRail, NavSection } from "@/components/layout/NavigationRail";
+import { SettingsView } from "@/components/settings/SettingsView";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { GroupDetailsModal } from "@/components/groups/GroupDetailsModal";
 import { NewChatModal } from "@/components/chat/NewChatModal";
@@ -18,10 +20,11 @@ import {
 } from "@/lib/api";
 import { signalWs } from "@/lib/websocket";
 import { Conversation, Message } from "@/types";
-import { ShieldCheck, Loader2 } from "lucide-react";
+import { ShieldCheck, Loader2, PhoneCall } from "lucide-react";
 
 function MessengerApp() {
   const { currentUser, isLoading: authLoading, logout } = useAuth();
+  const [activeSection, setActiveSection] = useState<NavSection>("chats");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -29,7 +32,7 @@ function MessengerApp() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState<string | undefined>(undefined);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
@@ -63,6 +66,29 @@ function MessengerApp() {
     setNotice(msg);
     setTimeout(() => setNotice(null), 2500);
   };
+
+  // Keyboard Shortcuts (Cmd/Ctrl+K, Cmd/Ctrl+N, Esc)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        setNewChatTab("search");
+        setNewChatInitialQuery("");
+        setIsNewChatOpen(true);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[aria-label="Search"]') as HTMLInputElement;
+        searchInput?.focus();
+      } else if (e.key === "Escape") {
+        if (isDetailsOpen) setIsDetailsOpen(false);
+        if (isNewChatOpen) setIsNewChatOpen(false);
+        if (isNewGroupOpen) setIsNewGroupOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isDetailsOpen, isNewChatOpen, isNewGroupOpen]);
 
   // Load conversations when user is authenticated
   useEffect(() => {
@@ -153,6 +179,7 @@ function MessengerApp() {
     }
 
     setSelectedId(id);
+    setActiveSection("chats");
 
     // Clear local unread count
     setConversations((prev) =>
@@ -609,8 +636,10 @@ function MessengerApp() {
 
   const activeConversation = conversations.find((c) => c.id === selectedId);
 
+  const totalUnread = conversations.reduce((acc, c) => acc + (c.unread_count || 0), 0);
+
   return (
-    <main className="h-screen w-screen overflow-hidden flex flex-col bg-white dark:bg-[#121212] text-zinc-900 dark:text-zinc-100 font-sans relative">
+    <main className="h-screen w-screen overflow-hidden flex bg-[#121212] text-zinc-100 font-sans select-none relative">
       {/* Top subtle sync indicator */}
       {(isLoadingConversations || isLoadingMessages) && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#2C6BED] animate-pulse z-50 pointer-events-none" />
@@ -618,52 +647,96 @@ function MessengerApp() {
 
       {/* Toast Notice */}
       {notice && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-zinc-900/90 dark:bg-zinc-100/90 text-white dark:text-zinc-900 text-xs px-4 py-2 rounded-full shadow-xl z-50 animate-fade-in pointer-events-none">
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-[#282828] text-white text-xs px-4 py-2 rounded-full shadow-xl z-50 border border-[#333333] animate-fade-in pointer-events-none">
           {notice}
         </div>
       )}
 
-      {/* Main 2-Pane Messenger Shell */}
-      <div className="flex-1 flex overflow-hidden w-full h-full">
-        {/* Sidebar: Visible on desktop, or on mobile when no conversation is selected */}
-        <div
-          className={`h-full ${
-            selectedId !== null ? "hidden md:flex" : "flex w-full"
-          }`}
-        >
-          <ConversationSidebar
-            currentUser={currentUser}
-            conversations={conversations}
-            selectedId={selectedId}
-            onSelectConversation={handleSelectConversation}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            onNewChat={handleOpenNewChat}
-            onNewGroup={() => setIsNewGroupOpen(true)}
-            onOpenContacts={handleOpenContacts}
-            onGlobalSearch={handleGlobalSearch}
-          />
-        </div>
-
-        {/* Chat Area: Visible on desktop, or on mobile when a conversation is selected */}
-        <div
-          className={`flex-1 h-full ${
-            selectedId === null ? "hidden md:flex" : "flex w-full"
-          }`}
-        >
-          <ChatWindow
-            conversation={activeConversation}
-            messages={messages}
-            currentUser={currentUser}
-            isTyping={isTyping}
-            typingUser={typingUser}
-            onSendMessage={handleSendMessage}
-            onTypingStart={handleTypingStart}
-            onTypingStop={handleTypingStop}
-            onBack={() => setSelectedId(null)}
-            onOpenDetails={() => setIsDetailsOpen(true)}
-          />
-        </div>
+      {/* TIER 1: Far-Left Desktop Navigation Rail (Hidden on mobile) */}
+      <div className="hidden md:flex h-full">
+        <NavigationRail
+          activeSection={activeSection}
+          onSelectSection={(sec) => {
+            setActiveSection(sec);
+            if (sec === "calls") showNotice("Calls coming soon");
+            if (sec === "stories") showNotice("Stories & Linked Devices coming soon");
+          }}
+          unreadCount={totalUnread}
+        />
       </div>
+
+      {/* MAIN BODY: Depends on activeSection */}
+      {activeSection === "settings" ? (
+        /* Full-screen dedicated Settings View */
+        <div className="flex-1 h-full flex overflow-hidden">
+          <SettingsView
+            currentUser={currentUser}
+            isDarkMode={isDarkMode}
+            onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+            onLogout={logout}
+            onClose={() => setActiveSection("chats")}
+          />
+        </div>
+      ) : activeSection === "calls" ? (
+        /* Calls Placeholder Canvas */
+        <div className="flex-1 h-full flex flex-col items-center justify-center p-8 text-center bg-[#121212]">
+          <div className="w-16 h-16 rounded-3xl bg-[#202020] border border-[#2a2a2a] flex items-center justify-center mb-4 text-[#2C6BED]">
+            <PhoneCall className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-1">Calls</h2>
+          <p className="text-xs text-zinc-400 max-w-sm mb-4 leading-relaxed">
+            Encrypted voice and video calling between Signal contacts is coming soon.
+          </p>
+          <button
+            onClick={() => setActiveSection("chats")}
+            className="px-4 py-2 bg-[#2C6BED] text-white text-xs font-semibold rounded-xl hover:bg-[#2055c4] transition-colors"
+          >
+            Back to Chats
+          </button>
+        </div>
+      ) : (
+        /* Active Chats: 2-Pane Split (Sidebar + Canvas) */
+        <div className="flex-1 flex overflow-hidden w-full h-full">
+          {/* Tier 2: Chats Sidebar (Visible on desktop, or mobile when no conversation selected) */}
+          <div
+            className={`h-full ${
+              selectedId !== null ? "hidden md:flex" : "flex w-full md:w-auto"
+            }`}
+          >
+            <ConversationSidebar
+              currentUser={currentUser}
+              conversations={conversations}
+              selectedId={selectedId}
+              onSelectConversation={handleSelectConversation}
+              onOpenSettings={() => setActiveSection("settings")}
+              onNewChat={handleOpenNewChat}
+              onNewGroup={() => setIsNewGroupOpen(true)}
+              onOpenContacts={handleOpenContacts}
+              onGlobalSearch={handleGlobalSearch}
+            />
+          </div>
+
+          {/* Tier 3: Main Chat Canvas (Visible on desktop, or mobile when chat selected) */}
+          <div
+            className={`flex-1 h-full ${
+              selectedId === null ? "hidden md:flex" : "flex w-full"
+            }`}
+          >
+            <ChatWindow
+              conversation={activeConversation}
+              messages={messages}
+              currentUser={currentUser}
+              isTyping={isTyping}
+              typingUser={typingUser}
+              onSendMessage={handleSendMessage}
+              onTypingStart={handleTypingStart}
+              onTypingStop={handleTypingStop}
+              onBack={() => setSelectedId(null)}
+              onOpenDetails={() => setIsDetailsOpen(true)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* New Direct Chat / Contacts Modal */}
       <NewChatModal
