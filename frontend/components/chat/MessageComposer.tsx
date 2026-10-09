@@ -33,7 +33,6 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     }
   }, [onTypingStop]);
 
-  // Cleanup typing when unmounting or disabled
   useEffect(() => {
     return () => {
       stopTyping();
@@ -45,13 +44,11 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     setContent(val);
 
     if (val.trim().length > 0) {
-      // First character: trigger typing.start
       if (!isTypingRef.current) {
         isTypingRef.current = true;
         onTypingStart?.();
       }
 
-      // Reset debounce inactivity timer (2.5s)
       if (typingTimerRef.current) {
         clearTimeout(typingTimerRef.current);
       }
@@ -59,7 +56,6 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         stopTyping();
       }, 2500);
     } else {
-      // Input cleared
       stopTyping();
     }
   };
@@ -68,7 +64,6 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     const trimmed = content.trim();
     if (!trimmed || disabled) return;
 
-    // Immediately stop typing indicator on send
     stopTyping();
 
     onSendMessage(trimmed);
@@ -85,7 +80,6 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     }
   };
 
-  // Auto-resize textarea up to 120px
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -99,7 +93,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   };
 
   return (
-    <footer className="p-3 bg-white dark:bg-[#181818] border-t border-zinc-200 dark:border-[#282828] relative flex-shrink-0">
+    <footer className="px-3 py-2 bg-white dark:bg-[#181818] border-t border-zinc-200 dark:border-[#282828] relative flex-shrink-0">
       {toast && (
         <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-zinc-900/90 dark:bg-zinc-100/90 text-white dark:text-zinc-900 text-xs px-3 py-1 rounded-full shadow pointer-events-none z-20">
           {toast}
@@ -122,7 +116,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           value={content}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder="Signal message"
+          placeholder="Message"
           rows={1}
           disabled={disabled}
           className="flex-1 bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 resize-none max-h-[120px] py-1.5 focus:outline-none"
@@ -141,7 +135,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           title="Send message (Enter)"
           aria-label="Send message"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-[18px] h-[18px]" />
         </button>
       </div>
     </footer>

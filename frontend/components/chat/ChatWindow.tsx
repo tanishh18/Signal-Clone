@@ -21,6 +21,17 @@ interface ChatWindowProps {
   onOpenDetails: () => void;
 }
 
+function formatDateSeparator(dateStr: string): string {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (date.toDateString() === today.toDateString()) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   conversation,
   messages,
@@ -35,12 +46,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new messages or typing state change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // Calm Empty State when no conversation is selected
   if (!conversation) {
     return (
       <div className="flex-1 h-full hidden md:flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-[#121212] select-none text-center">
@@ -64,8 +73,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const isGroup = conversation.type === "group";
 
   return (
-    <section className="flex-1 h-full flex flex-col bg-white dark:bg-[#121212] relative overflow-hidden">
-      {/* Pinned Chat Header */}
+    <section className="flex-1 h-full flex flex-col bg-[#f8f9fa] dark:bg-[#121212] relative overflow-hidden">
       <ChatHeader
         conversation={conversation}
         currentUser={currentUser}
@@ -73,34 +81,49 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         onOpenDetails={onOpenDetails}
       />
 
-      {/* Message History Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col">
-        {/* Security / Encryption Badge at top of conversation */}
         <div className="flex justify-center my-3 select-none">
           <div className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-[#202020] text-zinc-500 dark:text-zinc-400 text-[11px] px-3 py-1 rounded-full border border-zinc-200/60 dark:border-zinc-800">
             <Lock className="w-3 h-3 text-[#2C6BED]" />
-            <span>Messages in this conversation are private and encrypted</span>
+            <span>Messages are private in this demo</span>
           </div>
         </div>
 
-        {/* Date separator */}
-        <div className="flex justify-center my-2 select-none">
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-[#1c1c1c] px-2.5 py-0.5 rounded-full">
-            Today
-          </span>
-        </div>
-
-        {/* Message Thread */}
         <div className="flex-1 flex flex-col justify-end">
           {messages.length > 0 ? (
-            messages.map((msg) => (
-              <MessageBubble
-                key={msg.temp_id || msg.id}
-                message={msg}
-                isOutgoing={msg.sender_id === currentUser.id}
-                isGroup={isGroup}
-              />
-            ))
+            messages.map((msg, index) => {
+              const prevMsg = index > 0 ? messages[index - 1] : null;
+              const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+
+              const msgDate = msg.created_at || new Date().toISOString();
+              const prevDate = prevMsg ? (prevMsg.created_at || new Date().toISOString()) : null;
+              const nextDate = nextMsg ? (nextMsg.created_at || new Date().toISOString()) : null;
+
+              const isDifferentDay = !prevMsg || (prevDate ? new Date(msgDate).toDateString() !== new Date(prevDate).toDateString() : true);
+              const isFirstInGroup = !prevMsg || prevMsg.sender_id !== msg.sender_id || isDifferentDay;
+              
+              const isNextDifferentDay = Boolean(nextMsg && nextDate && new Date(msgDate).toDateString() !== new Date(nextDate).toDateString());
+              const isLastInGroup = Boolean(!nextMsg || nextMsg.sender_id !== msg.sender_id || isNextDifferentDay);
+
+              return (
+                <React.Fragment key={msg.temp_id || msg.id}>
+                  {isDifferentDay && (
+                    <div className="flex justify-center my-2 select-none">
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-[#1c1c1c] px-2.5 py-0.5 rounded-full">
+                        {formatDateSeparator(msgDate)}
+                      </span>
+                    </div>
+                  )}
+                  <MessageBubble
+                    message={msg}
+                    isOutgoing={msg.sender_id === currentUser.id}
+                    isGroup={isGroup}
+                    isFirstInGroup={isFirstInGroup}
+                    isLastInGroup={isLastInGroup}
+                  />
+                </React.Fragment>
+              );
+            })
           ) : (
             <div className="py-16 text-center text-zinc-400 dark:text-zinc-500 select-none">
               <p className="text-sm">No messages yet</p>
@@ -108,14 +131,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             </div>
           )}
 
-          {/* Active Typing Indicator */}
           {isTyping && <TypingIndicator displayName={typingUser} />}
 
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Pinned Message Composer */}
       <MessageComposer
         onSendMessage={onSendMessage}
         onTypingStart={onTypingStart}

@@ -49,10 +49,10 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3.5 py-3 flex items-center gap-3 transition-colors relative outline-none focus-visible:bg-zinc-100 dark:focus-visible:bg-zinc-800 ${
+      className={`w-full text-left px-3 py-2.5 flex items-center gap-3 transition-colors relative outline-none focus-visible:ring-1 focus-visible:ring-[#2C6BED] focus-visible:ring-inset ${
         isSelected
-          ? "bg-zinc-100 dark:bg-[#222222] border-l-[3px] border-[#2C6BED]"
-          : "hover:bg-zinc-50 dark:hover:bg-[#1a1a1a] border-l-[3px] border-transparent"
+          ? "bg-[#2C6BED]/10 dark:bg-[#2C6BED]/15"
+          : "hover:bg-zinc-50 dark:hover:bg-[#1e1e1e]"
       }`}
     >
       <Avatar
@@ -66,7 +66,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline justify-between mb-0.5">
           <span
-            className={`font-semibold text-sm truncate ${
+            className={`font-semibold text-[13px] truncate ${
               isSelected
                 ? "text-zinc-900 dark:text-zinc-50"
                 : "text-zinc-800 dark:text-zinc-200"
@@ -74,7 +74,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           >
             {conversation.name || "Conversation"}
           </span>
-          <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal ml-2 flex-shrink-0" suppressHydrationWarning>
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-normal ml-2 flex-shrink-0" suppressHydrationWarning>
             {timeText}
           </span>
         </div>

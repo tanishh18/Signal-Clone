@@ -9,8 +9,12 @@ backend/__pycache__/
 *$py.class
 *.sqlite3
 *.db
+*.db-wal
+*.db-shm
 backend/*.db
 backend/*.sqlite3
+backend/*.db-wal
+backend/*.db-shm
 
 # Node / Next.js
 frontend/node_modules/

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Conversation, User } from "@/types";
 import { ConversationItem } from "./ConversationItem";
 import { Avatar } from "@/components/ui/Avatar";
-import { Search, X, Settings, Plus, ShieldCheck, Users, BookUser } from "lucide-react";
+import { Search, X, Plus, ShieldCheck, Users, BookUser } from "lucide-react";
 
 interface ConversationSidebarProps {
   currentUser: User;
@@ -40,9 +40,9 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   });
 
   return (
-    <aside className="w-full md:w-[340px] lg:w-[380px] h-full flex flex-col bg-white dark:bg-[#181818] border-r border-zinc-200 dark:border-[#282828] select-none flex-shrink-0">
+    <aside className="w-full md:w-[320px] lg:w-[360px] h-full flex flex-col bg-white dark:bg-[#181818] border-r border-zinc-200 dark:border-[#282828] select-none flex-shrink-0">
       {/* Top Header */}
-      <div className="px-4 py-3.5 flex items-center justify-between border-b border-zinc-100 dark:border-[#242424]">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100 dark:border-[#242424]">
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenSettings}
@@ -70,7 +70,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 text-zinc-600 dark:text-zinc-300">
+        <div className="flex items-center gap-0.5 text-zinc-600 dark:text-zinc-300">
           {onOpenContacts && (
             <button
               onClick={onOpenContacts}
@@ -78,7 +78,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
               title="Contacts & People"
               aria-label="View Contacts"
             >
-              <BookUser className="w-4 h-4" />
+              <BookUser className="w-[18px] h-[18px]" />
             </button>
           )}
           <button
@@ -87,7 +87,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             title="New Group"
             aria-label="Create new group"
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-[18px] h-[18px]" />
           </button>
           <button
             onClick={onNewChat}
@@ -95,28 +95,20 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             title="New Message"
             aria-label="Start new conversation"
           >
-            <Plus className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onOpenSettings}
-            className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100"
-            title="Settings"
-            aria-label="Open settings"
-          >
-            <Settings className="w-4 h-4" />
+            <Plus className="w-[18px] h-[18px]" />
           </button>
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="px-3.5 py-2.5">
-        <div className="relative flex items-center bg-zinc-100 dark:bg-[#222222] rounded-lg px-3 py-1.5 focus-within:ring-1 focus-within:ring-[#2C6BED]">
+      <div className="px-3 py-2">
+        <div className="relative flex items-center bg-zinc-100 dark:bg-[#222222] rounded-xl px-3 py-[7px] focus-within:ring-1 focus-within:ring-[#2C6BED]">
           <Search className="w-4 h-4 text-zinc-400 mr-2 flex-shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search conversations"
+            placeholder="Search"
             className="w-full bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
             aria-label="Search conversations"
           />
@@ -133,7 +125,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
         {searchQuery.trim() && onGlobalSearch && (
           <button
             onClick={() => onGlobalSearch(searchQuery.trim())}
-            className="w-full mt-2 text-left text-xs text-[#2C6BED] hover:underline flex items-center gap-1.5 px-1 py-0.5 font-medium transition-colors"
+            className="w-full mt-1.5 text-left text-xs text-[#2C6BED] hover:underline flex items-center gap-1.5 px-1 py-0.5 font-medium transition-colors"
           >
             <Search className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">Search Signal users for &quot;{searchQuery.trim()}&quot;</span>
@@ -142,7 +134,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
       </div>
 
       {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto divide-y divide-transparent">
+      <div className="flex-1 overflow-y-auto">
         {filteredConversations.length > 0 ? (
           filteredConversations.map((conv) => (
             <ConversationItem
@@ -162,7 +154,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             <p className="text-xs mt-1">
               {searchQuery
                 ? `No results for "${searchQuery}"`
-                : "Tap the + button above to start your first encrypted conversation."}
+                : "Tap the + button above to start a new conversation."}
             </p>
           </div>
         )}
