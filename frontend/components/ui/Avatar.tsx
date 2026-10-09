@@ -68,11 +68,15 @@ export const Avatar: React.FC<AvatarProps> = ({
     <div className={`relative inline-flex flex-shrink-0 ${className}`}>
       <div
         className={`${sizeClasses[size]} rounded-full flex items-center justify-center font-medium overflow-hidden select-none ${
-          !src || hasError ? colorClass : "bg-zinc-200 dark:bg-zinc-800"
+          isGroup && (!src || hasError)
+            ? "bg-white text-[#9333EA] border border-[#a855f7]/30"
+            : !src || hasError
+            ? colorClass
+            : "bg-zinc-200 dark:bg-zinc-800"
         }`}
       >
         {isGroup && (!src || hasError) ? (
-          <Users className="w-1/2 h-1/2 opacity-90" />
+          <Users className="w-1/2 h-1/2 stroke-[2] text-[#9333EA]" />
         ) : src && !hasError ? (
           // Standard img with reliable fallback
           // eslint-disable-next-line @next/next/no-img-element

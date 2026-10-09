@@ -23,6 +23,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   onDraftChange,
 }) => {
   const [content, setContent] = useState(draftText);
+  const prevDraftRef = useRef(draftText);
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -32,7 +33,10 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 
   // Synchronize when conversation draft switches
   useEffect(() => {
-    setContent(draftText);
+    if (prevDraftRef.current !== draftText) {
+      prevDraftRef.current = draftText;
+      setContent(draftText);
+    }
   }, [draftText]);
 
   const stopTyping = useCallback(() => {
@@ -128,8 +132,10 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     setTimeout(() => setToast(null), 2500);
   };
 
+  const hasContent = content.trim().length > 0;
+
   return (
-    <footer className="px-4 py-2.5 bg-[#181818] border-t border-[#242424] relative flex-shrink-0">
+    <footer className="px-4 py-3 bg-[#1a1a1a] border-t border-[#262626]/80 relative flex-shrink-0">
       {/* Toast */}
       {toast && (
         <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#282828] text-white text-xs px-3.5 py-1.5 rounded-full shadow-lg border border-[#333333] pointer-events-none z-30">
@@ -155,23 +161,23 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         }}
       />
 
-      {/* Composer Row */}
-      <div className="flex items-center gap-2">
+      {/* Composer Row — matching Signal: [Emoji] [Input pill] [Mic/Send] [Attach+] */}
+      <div className="flex items-end gap-2">
         {/* Left: Emoji Smiley */}
         <button
           type="button"
           onClick={() => setIsEmojiOpen(!isEmojiOpen)}
-          className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
-            isEmojiOpen ? "text-white bg-[#282828]" : "text-zinc-400 hover:text-zinc-200"
+          className={`p-2 rounded-full transition-colors flex-shrink-0 mb-0.5 ${
+            isEmojiOpen ? "text-white bg-[#282828]" : "text-zinc-400 hover:text-zinc-200 hover:bg-[#252525]"
           }`}
           title="Insert Emoji"
           aria-label="Insert Emoji"
         >
-          <Smile className="w-5 h-5" />
+          <Smile className="w-5 h-5 stroke-[1.5]" />
         </button>
 
         {/* Center: Rounded Pill Message Input */}
-        <div className="flex-1 flex items-center bg-[#242424] rounded-full px-4 py-1.5 focus-within:ring-1 focus-within:ring-[#2C6BED]">
+        <div className="flex-1 flex items-end bg-[#2a2a2a] rounded-2xl px-4 py-2 focus-within:ring-1 focus-within:ring-[#2C6BED]/50 transition-shadow">
           <textarea
             ref={textareaRef}
             value={content}
@@ -180,18 +186,18 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
             placeholder="Message"
             rows={1}
             disabled={disabled}
-            className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 resize-none max-h-[120px] py-1 focus:outline-none"
+            className="w-full bg-transparent text-[13px] text-zinc-100 placeholder-zinc-500 resize-none max-h-[100px] py-0 focus:outline-none leading-[1.4] align-bottom"
             aria-label="Message text"
           />
         </div>
 
-        {/* Right Action 1: Send button when text typed, Voice Note Mic when empty */}
-        {content.trim() ? (
+        {/* Right: Voice note or Send */}
+        {hasContent ? (
           <button
             type="button"
             onClick={handleSend}
             disabled={disabled}
-            className="p-2 bg-[#2C6BED] text-white rounded-full hover:bg-[#2055c4] transition-colors flex-shrink-0 cursor-pointer shadow-sm"
+            className="p-2 bg-[#2C6BED] text-white rounded-full hover:bg-[#2055c4] transition-colors flex-shrink-0 mb-0.5 shadow-sm"
             title="Send message"
             aria-label="Send message"
           >
@@ -201,27 +207,27 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           <button
             type="button"
             onClick={() => showNotice("Voice messages coming soon")}
-            className="p-1.5 text-zinc-400 hover:text-zinc-200 transition-colors flex-shrink-0"
+            className="p-2 text-zinc-400 hover:text-zinc-200 hover:bg-[#252525] rounded-full transition-colors flex-shrink-0 mb-0.5"
             title="Record voice message"
             aria-label="Record voice message"
           >
-            <Mic className="w-5 h-5" />
+            <Mic className="w-5 h-5 stroke-[1.5]" />
           </button>
         )}
 
-        {/* Right Action 2: Plus Icon for Attachments */}
+        {/* Attach + */}
         <button
           type="button"
           onClick={() => setIsAttachmentOpen(!isAttachmentOpen)}
-          className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+          className={`p-2 rounded-full transition-colors flex-shrink-0 mb-0.5 ${
             isAttachmentOpen
               ? "text-white bg-[#282828]"
-              : "text-zinc-400 hover:text-zinc-200"
+              : "text-zinc-400 hover:text-zinc-200 hover:bg-[#252525]"
           }`}
           title="Add attachment"
           aria-label="Add attachment"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-5 h-5 stroke-[1.5]" />
         </button>
       </div>
     </footer>

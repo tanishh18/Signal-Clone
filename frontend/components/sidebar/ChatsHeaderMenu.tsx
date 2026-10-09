@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { Archive, FolderPlus, Moon, ChevronRight } from "lucide-react";
+import { Archive, FolderPlus, Moon, ChevronRight, Users, BookUser } from "lucide-react";
 
 interface ChatsHeaderMenuProps {
   isOpen: boolean;
@@ -9,6 +9,8 @@ interface ChatsHeaderMenuProps {
   onViewArchive?: () => void;
   onAddFolder?: () => void;
   onNotificationProfile?: () => void;
+  onNewGroup?: () => void;
+  onOpenContacts?: () => void;
 }
 
 export const ChatsHeaderMenu: React.FC<ChatsHeaderMenuProps> = ({
@@ -17,6 +19,8 @@ export const ChatsHeaderMenu: React.FC<ChatsHeaderMenuProps> = ({
   onViewArchive,
   onAddFolder,
   onNotificationProfile,
+  onNewGroup,
+  onOpenContacts,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -44,16 +48,46 @@ export const ChatsHeaderMenu: React.FC<ChatsHeaderMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute top-12 right-2 w-56 bg-[#202020] text-zinc-100 rounded-xl shadow-2xl border border-[#2d2d2d] py-1.5 z-50 animate-fade-in select-none"
+      className="absolute top-10 right-2 w-52 bg-[#202020] text-zinc-100 rounded-xl shadow-2xl border border-[#2d2d2d] py-1.5 z-50 animate-fade-in select-none"
     >
+      {onNewGroup && (
+        <button
+          onClick={() => {
+            onClose();
+            onNewGroup();
+          }}
+          className="w-full px-3 py-1.5 text-xs font-normal flex items-center gap-2.5 hover:bg-[#282828] transition-colors text-left"
+        >
+          <Users className="w-3.5 h-3.5 text-zinc-400" />
+          <span>New Group</span>
+        </button>
+      )}
+
+      {onOpenContacts && (
+        <button
+          onClick={() => {
+            onClose();
+            onOpenContacts();
+          }}
+          className="w-full px-3 py-1.5 text-xs font-normal flex items-center gap-2.5 hover:bg-[#282828] transition-colors text-left"
+        >
+          <BookUser className="w-3.5 h-3.5 text-zinc-400" />
+          <span>Contacts & People</span>
+        </button>
+      )}
+
+      {(onNewGroup || onOpenContacts) && (
+        <div className="my-1 border-t border-[#2a2a2a]" />
+      )}
+
       <button
         onClick={() => {
           onClose();
           onViewArchive?.();
         }}
-        className="w-full px-3.5 py-2 text-[13px] font-normal flex items-center gap-3 hover:bg-[#2b2b2b] transition-colors text-left"
+        className="w-full px-3 py-1.5 text-xs font-normal flex items-center gap-2.5 hover:bg-[#282828] transition-colors text-left"
       >
-        <Archive className="w-4 h-4 text-zinc-400" />
+        <Archive className="w-3.5 h-3.5 text-zinc-400" />
         <span>View Archive</span>
       </button>
 

@@ -70,27 +70,29 @@ A full-stack Signal-inspired messaging platform built as a hiring assignment. Th
 
 ## API Overview
 
-### REST Endpoints
-
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/auth/request-otp` | Request mock OTP for a user |
-| POST | `/auth/verify-otp` | Verify OTP and receive JWT |
-| POST | `/auth/register` | Register new user |
-| GET | `/auth/me` | Get current authenticated user |
-| GET | `/users/search` | Search users by name/username/phone |
-| GET | `/contacts/` | List user's contacts |
-| POST | `/contacts/` | Add a contact |
+| GET | `/health` | Health check endpoint |
+| GET | `/api/health` | Health check alias |
+| POST | `/auth/request-otp` | Request mock OTP (returns `123456`) |
+| POST | `/auth/register` | Register new user with username, display name, and OTP |
+| POST | `/auth/login` | Log in with username/phone and OTP, receive JWT token |
+| POST | `/auth/logout` | Log out and update user offline presence |
+| GET | `/auth/me` | Get current authenticated user profile |
+| GET | `/users/search` | Search users by query string (excludes caller) |
+| GET | `/contacts` | List authenticated user's saved contacts |
+| POST | `/contacts` | Add a new contact by user ID |
 | DELETE | `/contacts/{id}` | Remove a contact |
-| GET | `/conversations/` | List user's conversations |
-| POST | `/conversations/direct` | Create or get 1:1 conversation |
-| GET | `/conversations/{id}` | Get conversation details |
-| GET | `/conversations/{id}/messages` | Get message history |
-| POST | `/conversations/{id}/messages` | Send a message |
-| PUT | `/conversations/{id}/read` | Mark conversation as read |
-| POST | `/groups/` | Create a group |
-| POST | `/groups/{id}/members` | Add group member |
-| DELETE | `/groups/{id}/members/{uid}` | Remove group member |
+| GET | `/conversations` | List user's conversations sorted by activity |
+| POST | `/conversations` | Create or retrieve direct 1:1 conversation (duplicate-safe) |
+| GET | `/conversations/{id}` | Get conversation details (membership checked) |
+| GET | `/conversations/{id}/messages` | Get chronological message history |
+| POST | `/conversations/{id}/messages` | Send a new message to conversation |
+| POST | `/conversations/{id}/read` | Mark unread messages in conversation as read |
+| POST | `/groups` | Create group conversation (creator automatically admin) |
+| GET | `/groups/{id}/members` | View group members and roles |
+| POST | `/groups/{id}/members` | Add member to group (admin only) |
+| DELETE | `/groups/{id}/members/{uid}` | Remove member (admin) or leave group (self) |
 
 ### WebSocket Events
 
@@ -189,15 +191,65 @@ python -m pytest tests/ -v
 
 ---
 
+## Deployment Instructions
+
+### Architecture
+- **Frontend:** Hosted on **Vercel** (or Netlify / Render Static).
+- **Backend:** Hosted on **Render** (or Railway / Fly.io / VPS) as a single persistent service instance with WebSocket support.
+
+### Backend Deployment (e.g. Render / Railway / VPS)
+- **Build Command:** `pip install -r requirements.txt && python seed.py`
+- **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}`
+- **Required Environment Variables:**
+  - `PORT`: Provided automatically by host (default `8000`)
+  - `CORS_ORIGINS`: Your frontend URL (e.g., `https://your-signal-clone.vercel.app`)
+  - `JWT_SECRET`: A secure random string for JWT token signing
+  - `DATABASE_URL`: `sqlite:///./signal.db` (or a mounted persistent disk path `sqlite:////var/data/signal.db`)
+
+### Frontend Deployment (e.g. Vercel)
+- **Root Directory:** `frontend`
+- **Framework Preset:** Next.js
+- **Build Command:** `npm run build`
+- **Install Command:** `npm install`
+- **Required Environment Variables:**
+  - `NEXT_PUBLIC_API_URL`: Your deployed backend URL (e.g. `https://your-signal-backend.onrender.com`)
+  - `NEXT_PUBLIC_WS_URL`: Your deployed WebSocket URL (e.g. `wss://your-signal-backend.onrender.com/ws`)
+
+---
+
+## Desktop Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl + N` | Open New Chat / Compose Search modal |
+| `Cmd/Ctrl + F` | Focus Sidebar Search field |
+| `Escape` | Close any active modal, search bar, popover, or details view |
+| `Enter` | Send message in Message Composer |
+| `Shift + Enter` | Insert newline in Message Composer |
+
+---
+
+## Implemented & Simulated Features
+
+- **Three-Tier Shell**: Fixed 60px Navigation Rail (Chats, Calls, Stories, Settings) + 320px Contextual Sidebar + Main Canvas
+- **Message Reactions & Emojis**: Quick horizontal reaction picker (❤️, 👍, 👎, 😂, 😮, 😢, 🙏, 🔥), reaction badges, and expandable 32-emoji picker
+- **In-Chat Message Search**: Search messages in conversation, active query match count, next/previous match buttons, keyword mark highlighting
+- **Pinned Messages**: Pin/unpin messages via hover/context menu with top pinned message banner
+- **Call Simulation**: Encrypted voice & video call modal with calling state, call timer, mic/camera toggles, and end call button
+- **Sidebar Filtering**: Filter conversation list by All, Unread, or Groups
+- **Draft Persistence**: Unsent message drafts preserved per conversation and persisted across page reloads
+- **Settings Persistence**: Dark/light theme selection and privacy toggles (read receipts, typing indicators, disappearing timer) saved in localStorage
+
+---
+
 ## Placeholder Features
 
-The following features are represented in the UI as "Coming Soon" placeholders:
+The following extended features are represented in the UI as polite Signal-style indicators:
 
-- **Voice/Video Calls** — Buttons present in chat header, show placeholder toast
-- **File Attachments** — Paperclip icon in composer, shows placeholder toast
-- **Linked Devices** — Listed in Privacy settings as coming soon
-- **Stories** — Not implemented
-- **Disappearing Messages** — Not implemented
+- **Stories / Linked Devices** — Nav rail tab with coming soon toast
+- **File Attachments** — Attachment popover with photos, files, and polls
+- **Voice Note Recording** — Mic button shows voice messages coming soon
+- **Real WebRTC / E2EE** — Handled via client-side simulation and simulated encryption notices
 
 ---
 

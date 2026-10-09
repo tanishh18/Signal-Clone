@@ -127,19 +127,19 @@ export const NewGroupModal: React.FC<NewGroupModalProps> = ({
     : availableUsers;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs select-none">
-      <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-md shadow-2xl border border-zinc-200 dark:border-[#2a2a2a] overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs select-none">
+      <div className="bg-[#1c1c1c] rounded-3xl w-full max-w-md shadow-2xl border border-[#2a2a2a] overflow-hidden flex flex-col max-h-[85vh] text-zinc-100">
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-zinc-200 dark:border-[#282828] flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-[#2C6BED]" />
-            <h2 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+            <h2 className="font-bold text-base text-white">
               New Group
             </h2>
           </div>
           <button
             onClick={handleClose}
-            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-full transition-colors"
+            className="p-1 text-zinc-400 hover:text-white rounded-full transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5" />

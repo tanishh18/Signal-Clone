@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Conversation, Message, User } from "@/types";
 import { ChatHeader } from "./ChatHeader";
 import { MessageBubble } from "@/components/messages/MessageBubble";
 import { TypingIndicator } from "@/components/messages/TypingIndicator";
 import { MessageComposer } from "./MessageComposer";
+import { InChatSearchBar } from "./InChatSearchBar";
+import { CallModal } from "./CallModal";
+import { SafetyNumberModal } from "./SafetyNumberModal";
 import { Avatar } from "@/components/ui/Avatar";
-import { MessageSquare, Users } from "lucide-react";
+import { MessageSquare, Users, Pin } from "lucide-react";
 
 interface ChatWindowProps {
   conversation?: Conversation | null;
@@ -21,6 +24,17 @@ interface ChatWindowProps {
   onBack: () => void;
   onOpenDetails: () => void;
   onDeleteMessage?: (id: number) => void;
+  onReact?: (messageId: number, emoji: string) => void;
+  onTogglePin?: (messageId: number) => void;
+  onCopy?: (text: string) => void;
+  draftText?: string;
+  onDraftChange?: (text: string) => void;
+  onLeaveGroup?: (conversationId: number) => void;
+  onMarkUnread?: (conversationId: number) => void;
+  onPinChat?: (conversationId: number) => void;
+  onArchive?: (conversationId: number) => void;
+  onDeleteChat?: (conversationId: number) => void;
+  onBlock?: (conversationId: number) => void;
 }
 
 function formatDateSeparator(dateStr: string): string {
@@ -46,8 +60,40 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onBack,
   onOpenDetails,
   onDeleteMessage,
+  onReact,
+  onTogglePin,
+  onCopy,
+  draftText = "",
+  onDraftChange,
+  onLeaveGroup,
+  onMarkUnread,
+  onPinChat,
+  onArchive,
+  onDeleteChat,
+  onBlock,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // In-chat search state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+
+  // Call simulation state
+  const [isCallOpen, setIsCallOpen] = useState(false);
+  const [isVideoCall, setIsVideoCall] = useState(false);
+  const [isSafetyNumberOpen, setIsSafetyNumberOpen] = useState(false);
+
+  // Matching messages for in-chat search
+  const matchedMessageIds = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return messages.filter((m) => m.content.toLowerCase().includes(q)).map((m) => m.id);
+  }, [messages, searchQuery]);
+
+  const pinnedMessages = useMemo(() => {
+    return messages.filter((m) => m.is_pinned);
+  }, [messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,15 +142,93 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         currentUser={currentUser}
         onBack={onBack}
         onOpenDetails={onOpenDetails}
+        onSearchInChat={() => setIsSearchOpen(true)}
+        onStartCall={(video) => {
+          setIsVideoCall(video);
+          setIsCallOpen(true);
+        }}
+        onVerifySafetyNumber={() => setIsSafetyNumberOpen(true)}
+        onLeaveGroup={
+          conversation.type === "group" && onLeaveGroup
+            ? () => onLeaveGroup(conversation.id)
+            : undefined
+        }
+        onMarkUnread={onMarkUnread ? () => onMarkUnread(conversation.id) : undefined}
+        onPinChat={onPinChat ? () => onPinChat(conversation.id) : undefined}
+        onArchive={onArchive ? () => onArchive(conversation.id) : undefined}
+        onDelete={onDeleteChat ? () => onDeleteChat(conversation.id) : undefined}
+        onBlock={onBlock ? () => onBlock(conversation.id) : undefined}
+      />
+
+      {/* Safety Number Verification Modal */}
+      <SafetyNumberModal
+        isOpen={isSafetyNumberOpen}
+        onClose={() => setIsSafetyNumberOpen(false)}
+        contactName={conversation.name || "Contact"}
+        avatarUrl={conversation.avatar_url}
+      />
+
+      {/* In-Chat Search Bar */}
+      <InChatSearchBar
+        isOpen={isSearchOpen}
+        onClose={() => {
+          setIsSearchOpen(false);
+          setSearchQuery("");
+        }}
+        query={searchQuery}
+        onQueryChange={(q) => {
+          setSearchQuery(q);
+          setActiveMatchIndex(0);
+        }}
+        matchCount={matchedMessageIds.length}
+        activeMatchIndex={activeMatchIndex}
+        onNextMatch={() => {
+          if (matchedMessageIds.length > 0) {
+            setActiveMatchIndex((i) => (i + 1) % matchedMessageIds.length);
+          }
+        }}
+        onPrevMatch={() => {
+          if (matchedMessageIds.length > 0) {
+            setActiveMatchIndex((i) => (i - 1 + matchedMessageIds.length) % matchedMessageIds.length);
+          }
+        }}
+      />
+
+      {/* Pinned Messages Banner */}
+      {pinnedMessages.length > 0 && (
+        <div className="px-4 py-2 bg-[#1a1a1a] border-b border-[#252525] flex items-center justify-between text-xs text-zinc-300 z-10 select-none">
+          <div className="flex items-center gap-2 min-w-0">
+            <Pin className="w-3.5 h-3.5 text-amber-400 rotate-45 flex-shrink-0" />
+            <span className="font-semibold text-white">Pinned message:</span>
+            <span className="truncate text-zinc-300">
+              {pinnedMessages[pinnedMessages.length - 1].content}
+            </span>
+          </div>
+          <button
+            onClick={() => onTogglePin?.(pinnedMessages[pinnedMessages.length - 1].id)}
+            className="text-[11px] text-[#2C6BED] hover:underline flex-shrink-0 font-medium ml-2"
+          >
+            Unpin
+          </button>
+        </div>
+      )}
+
+      {/* Simulated Call Modal */}
+      <CallModal
+        isOpen={isCallOpen}
+        onClose={() => setIsCallOpen(false)}
+        contactName={conversation.name || "Signal Contact"}
+        avatarUrl={conversation.avatar_url}
+        isVideo={isVideoCall}
       />
 
       {/* Message History Area */}
       <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col">
-        {/* GROUP WELCOME / IDENTITY CARD matching Screenshots 4 & 5 */}
+        {/* GROUP WELCOME / IDENTITY CARD matching Signal Desktop */}
         {isGroup && (
           <div className="flex flex-col items-center my-6 select-none">
-            <div className="w-full max-w-sm bg-[#1c1c1c] border border-[#2a2a2a] rounded-3xl p-6 flex flex-col items-center text-center shadow-md">
-              <div className="mb-3">
+            <div className="w-full max-w-sm bg-[#1e1e1e] border border-[#2b2b2b]/60 rounded-3xl p-5 flex flex-col items-center text-center shadow-xs">
+              <div className="mb-2.5">
                 <Avatar
                   name={conversation.name || "Group"}
                   src={conversation.avatar_url}
@@ -112,7 +236,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   isGroup={true}
                 />
               </div>
-              <h3 className="text-lg font-bold text-white mb-1">
+              <h3 className="text-base font-semibold text-white mb-1">
                 {conversation.name}
               </h3>
               <p className="text-xs text-zinc-400 flex items-center gap-1.5">
@@ -126,7 +250,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             </div>
 
             {/* System creation notice */}
-            <p className="text-[11px] text-zinc-500 mt-4 flex items-center gap-1.5">
+            <p className="text-[10px] text-zinc-500 mt-3 flex items-center gap-1">
               <span>👥 You created the group.</span>
             </p>
           </div>
@@ -151,8 +275,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               return (
                 <React.Fragment key={msg.temp_id || msg.id}>
                   {isDifferentDay && (
-                    <div className="flex justify-center my-3 select-none">
-                      <span className="text-[11px] font-medium text-zinc-400">
+                    <div className="flex justify-center my-2 select-none">
+                      <span className="text-[10px] font-normal text-zinc-500">
                         {formatDateSeparator(msgDate)}
                       </span>
                     </div>
@@ -163,7 +287,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     isGroup={isGroup}
                     isFirstInGroup={isFirstInGroup}
                     isLastInGroup={isLastInGroup}
+                    currentUserId={currentUser.id}
+                    searchHighlight={searchQuery}
                     onDelete={onDeleteMessage}
+                    onCopy={onCopy}
+                    onTogglePin={onTogglePin}
+                    onReact={onReact}
                   />
                 </React.Fragment>
               );
@@ -187,6 +316,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         onSendMessage={onSendMessage}
         onTypingStart={onTypingStart}
         onTypingStop={onTypingStop}
+        draftText={draftText}
+        onDraftChange={onDraftChange}
       />
     </section>
   );

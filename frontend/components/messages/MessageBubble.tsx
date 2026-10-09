@@ -48,17 +48,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   // REFINEMENT 12: SYSTEM EVENT BUBBLES
   if (message.message_type === "system") {
     return (
-      <div className="flex justify-center my-3 select-none">
-        <span className="text-[11px] font-medium text-zinc-400 bg-[#1c1c1c] border border-[#262626] px-3 py-1 rounded-full shadow-xs">
+      <div className="flex justify-center my-1.5 select-none">
+        <span className="text-[10px] font-normal text-zinc-500 bg-[#202020] border border-[#282828] px-2.5 py-0.5 rounded-full">
           {message.content}
         </span>
       </div>
     );
   }
 
-  const outgoingRadius = isLastInGroup ? "rounded-[18px] rounded-br-[4px]" : "rounded-[18px]";
-  const incomingRadius = isLastInGroup ? "rounded-[18px] rounded-bl-[4px]" : "rounded-[18px]";
-  const spacing = isLastInGroup ? "mb-2" : "mb-[3px]";
+  const outgoingRadius = isLastInGroup ? "rounded-[16px] rounded-br-[3px]" : "rounded-[16px]";
+  const incomingRadius = isLastInGroup ? "rounded-[16px] rounded-bl-[3px]" : "rounded-[16px]";
+  const spacing = isLastInGroup ? "mb-1.5" : "mb-[2px]";
 
   const handleCopyText = () => {
     navigator.clipboard?.writeText(message.content);
@@ -91,7 +91,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     >
       {/* Sender display name in group chats for incoming messages */}
       {!isOutgoing && isGroup && message.sender && isFirstInGroup && (
-        <span className="text-[11px] font-semibold text-[#2C6BED] dark:text-blue-400 ml-3 mb-0.5 select-none">
+        <span className="text-[10px] font-medium text-[#4f8eff] ml-2.5 mb-0.5 select-none">
           {message.sender.display_name}
         </span>
       )}
@@ -128,15 +128,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Bubble itself */}
         <div
-          className={`px-3 py-[6px] text-[14px] leading-[20px] shadow-xs relative ${
+          className={`px-2.5 py-1 text-[13px] leading-[18px] shadow-2xs relative ${
             isOutgoing
               ? `bg-[#2C6BED] text-white ${outgoingRadius}`
-              : `bg-[#202020] text-zinc-100 ${incomingRadius} border border-[#262626]`
+              : `bg-[#242424] text-zinc-100 ${incomingRadius} border border-[#2b2b2b]`
           }`}
         >
           {/* Pinned Icon Indicator */}
           {message.is_pinned && (
-            <div className="flex items-center gap-1 text-[10px] text-amber-400/90 mb-1 select-none font-medium">
+            <div className="flex items-center gap-1 text-[9px] text-amber-400/90 mb-0.5 select-none font-medium">
               <Pin className="w-2.5 h-2.5 rotate-45" />
               <span>Pinned</span>
             </div>
@@ -145,14 +145,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {/* Message body with inline timestamp space */}
           <p className="whitespace-pre-wrap break-words">
             {renderContent()}
-            <span className="inline-block w-[65px]" aria-hidden="true">
+            <span className="inline-block w-[52px]" aria-hidden="true">
               &nbsp;
             </span>
           </p>
 
           {/* Floating timestamp and delivery receipts */}
           <span
-            className={`float-right -mt-[18px] ml-2 flex items-center gap-0.5 text-[10px] select-none whitespace-nowrap ${
+            className={`float-right -mt-[15px] ml-1.5 flex items-center gap-0.5 text-[9px] select-none whitespace-nowrap ${
               isOutgoing ? "text-white/70" : "text-zinc-400"
             }`}
           >
@@ -161,13 +161,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {isOutgoing && (
               <span className="flex-shrink-0 flex items-center" title={`Status: ${message.status}`}>
                 {message.status === "sending" ? (
-                  <Clock className="w-[13px] h-[13px] text-white/50 animate-pulse" />
+                  <Clock className="w-2.5 h-2.5 text-white/50 animate-pulse" />
                 ) : message.status === "read" ? (
-                  <CheckCheck className="w-[14px] h-[14px] text-[#a5d0ff]" />
+                  <CheckCheck className="w-3 h-3 text-[#a5d0ff]" />
                 ) : message.status === "delivered" ? (
-                  <CheckCheck className="w-[14px] h-[14px] text-white/80" />
+                  <CheckCheck className="w-3 h-3 text-white/80" />
                 ) : (
-                  <Check className="w-[14px] h-[14px] text-white/60" />
+                  <Check className="w-3 h-3 text-white/60" />
                 )}
               </span>
             )}

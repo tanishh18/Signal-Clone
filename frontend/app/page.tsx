@@ -8,7 +8,7 @@ import { ChatWindow } from "@/components/chat/ChatWindow";
 import { NavigationRail, NavSection } from "@/components/layout/NavigationRail";
 import { SettingsView } from "@/components/settings/SettingsView";
 import { SettingsModal } from "@/components/settings/SettingsModal";
-import { GroupDetailsModal } from "@/components/groups/GroupDetailsModal";
+import { GroupDetailsView } from "@/components/chat/GroupDetailsView";
 import { NewChatModal } from "@/components/chat/NewChatModal";
 import { NewGroupModal } from "@/components/groups/NewGroupModal";
 import {
@@ -20,7 +20,9 @@ import {
 } from "@/lib/api";
 import { signalWs } from "@/lib/websocket";
 import { Conversation, Message } from "@/types";
-import { ShieldCheck, Loader2, PhoneCall } from "lucide-react";
+import { CallsView } from "@/components/layout/CallsView";
+import { StoriesView } from "@/components/layout/StoriesView";
+import { ShieldCheck, Loader2 } from "lucide-react";
 
 function MessengerApp() {
   const { currentUser, isLoading: authLoading, logout } = useAuth();
@@ -32,7 +34,22 @@ function MessengerApp() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState<string | undefined>(undefined);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("signal_dark_mode");
+      if (saved !== null) return saved === "true";
+    }
+    return true;
+  });
+  const [drafts, setDrafts] = useState<Record<number, string>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("signal_drafts");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return {};
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
@@ -53,14 +70,109 @@ function MessengerApp() {
     conversationsRef.current = conversations;
   }, [conversations]);
 
-  // Synchronize dark theme class with html element
+  // Synchronize dark theme class with html element and persist
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
+    try {
+      localStorage.setItem("signal_dark_mode", String(isDarkMode));
+    } catch {}
   }, [isDarkMode]);
+
+  // Persist drafts
+  const handleDraftChange = (convId: number, text: string) => {
+    setDrafts((prev) => {
+      const next = { ...prev, [convId]: text };
+      try {
+        localStorage.setItem("signal_drafts", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Toggle reaction on a message
+  const handleReactToMessage = (messageId: number, emoji: string) => {
+    if (!currentUser) return;
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const currentReactions = m.reactions || [];
+        const existingIdx = currentReactions.findIndex((r) => r.emoji === emoji);
+
+        if (existingIdx >= 0) {
+          const target = currentReactions[existingIdx];
+          const hasMine = target.user_id === currentUser.id || target.users?.includes(currentUser.id);
+
+          if (hasMine) {
+            // Remove my reaction
+            const newCount = (target.count || 1) - 1;
+            if (newCount <= 0) {
+              return {
+                ...m,
+                reactions: currentReactions.filter((_, idx) => idx !== existingIdx),
+              };
+            } else {
+              return {
+                ...m,
+                reactions: currentReactions.map((r, idx) =>
+                  idx === existingIdx
+                    ? {
+                        ...r,
+                        count: newCount,
+                        users: r.users?.filter((u) => u !== currentUser.id) || [],
+                      }
+                    : r
+                ),
+              };
+            }
+          } else {
+            // Add my reaction to existing emoji
+            return {
+              ...m,
+              reactions: currentReactions.map((r, idx) =>
+                idx === existingIdx
+                  ? {
+                      ...r,
+                      count: (r.count || 1) + 1,
+                      users: [...(r.users || [r.user_id]), currentUser.id],
+                    }
+                  : r
+              ),
+            };
+          }
+        } else {
+          // Add brand new reaction
+          return {
+            ...m,
+            reactions: [
+              ...currentReactions,
+              {
+                emoji,
+                user_id: currentUser.id,
+                count: 1,
+                users: [currentUser.id],
+              },
+            ],
+          };
+        }
+      })
+    );
+  };
+
+  // Toggle pin on a message
+  const handleTogglePinMessage = (messageId: number) => {
+    setMessages((prev) => {
+      const target = prev.find((m) => m.id === messageId);
+      const isNowPinned = !target?.is_pinned;
+      showNotice(isNowPinned ? "Message pinned" : "Message unpinned");
+      return prev.map((m) =>
+        m.id === messageId ? { ...m, is_pinned: isNowPinned } : m
+      );
+    });
+  };
 
   const showNotice = (msg: string) => {
     setNotice(msg);
@@ -180,6 +292,7 @@ function MessengerApp() {
 
     setSelectedId(id);
     setActiveSection("chats");
+    setIsDetailsOpen(false);
 
     // Clear local unread count
     setConversations((prev) =>
@@ -658,8 +771,6 @@ function MessengerApp() {
           activeSection={activeSection}
           onSelectSection={(sec) => {
             setActiveSection(sec);
-            if (sec === "calls") showNotice("Calls coming soon");
-            if (sec === "stories") showNotice("Stories & Linked Devices coming soon");
           }}
           unreadCount={totalUnread}
         />
@@ -678,21 +789,14 @@ function MessengerApp() {
           />
         </div>
       ) : activeSection === "calls" ? (
-        /* Calls Placeholder Canvas */
-        <div className="flex-1 h-full flex flex-col items-center justify-center p-8 text-center bg-[#121212]">
-          <div className="w-16 h-16 rounded-3xl bg-[#202020] border border-[#2a2a2a] flex items-center justify-center mb-4 text-[#2C6BED]">
-            <PhoneCall className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-1">Calls</h2>
-          <p className="text-xs text-zinc-400 max-w-sm mb-4 leading-relaxed">
-            Encrypted voice and video calling between Signal contacts is coming soon.
-          </p>
-          <button
-            onClick={() => setActiveSection("chats")}
-            className="px-4 py-2 bg-[#2C6BED] text-white text-xs font-semibold rounded-xl hover:bg-[#2055c4] transition-colors"
-          >
-            Back to Chats
-          </button>
+        /* Real Calls View */
+        <div className="flex-1 h-full flex overflow-hidden">
+          <CallsView />
+        </div>
+      ) : activeSection === "stories" ? (
+        /* Real Stories View */
+        <div className="flex-1 h-full flex overflow-hidden">
+          <StoriesView currentUser={currentUser} />
         </div>
       ) : (
         /* Active Chats: 2-Pane Split (Sidebar + Canvas) */
@@ -722,18 +826,85 @@ function MessengerApp() {
               selectedId === null ? "hidden md:flex" : "flex w-full"
             }`}
           >
-            <ChatWindow
-              conversation={activeConversation}
-              messages={messages}
-              currentUser={currentUser}
-              isTyping={isTyping}
-              typingUser={typingUser}
-              onSendMessage={handleSendMessage}
-              onTypingStart={handleTypingStart}
-              onTypingStop={handleTypingStop}
-              onBack={() => setSelectedId(null)}
-              onOpenDetails={() => setIsDetailsOpen(true)}
-            />
+            {isDetailsOpen && activeConversation ? (
+              <GroupDetailsView
+                conversation={activeConversation}
+                currentUser={currentUser}
+                onBack={() => setIsDetailsOpen(false)}
+                onMembersUpdated={(updatedMembers) => {
+                  setConversations((prev) =>
+                    prev.map((c) =>
+                      c.id === activeConversation.id
+                        ? { ...c, members: updatedMembers }
+                        : c
+                    )
+                  );
+                }}
+                onLeaveGroup={(convId) => {
+                  setConversations((prev) =>
+                    prev.filter((c) => c.id !== convId)
+                  );
+                  if (selectedId === convId) {
+                    setSelectedId(null);
+                  }
+                  setIsDetailsOpen(false);
+                  showNotice("You left the group");
+                }}
+              />
+            ) : (
+              <ChatWindow
+                conversation={activeConversation}
+                messages={messages}
+                currentUser={currentUser}
+                isTyping={isTyping}
+                typingUser={typingUser}
+                onSendMessage={handleSendMessage}
+                onTypingStart={handleTypingStart}
+                onTypingStop={handleTypingStop}
+                onBack={() => setSelectedId(null)}
+                onOpenDetails={() => setIsDetailsOpen(true)}
+                onReact={handleReactToMessage}
+                onTogglePin={handleTogglePinMessage}
+                onCopy={() => showNotice("Copied to clipboard")}
+                draftText={selectedId ? drafts[selectedId] || "" : ""}
+                onDraftChange={(text) => {
+                  if (selectedId) handleDraftChange(selectedId, text);
+                }}
+                onLeaveGroup={(convId) => {
+                  setConversations((prev) =>
+                    prev.filter((c) => c.id !== convId)
+                  );
+                  if (selectedId === convId) {
+                    setSelectedId(null);
+                  }
+                  showNotice("You left the group");
+                }}
+                onMarkUnread={(convId) => {
+                  setConversations((prev) =>
+                    prev.map((c) =>
+                      c.id === convId ? { ...c, unread_count: (c.unread_count || 0) + 1 } : c
+                    )
+                  );
+                  showNotice("Marked as unread");
+                }}
+                onPinChat={() => {
+                  showNotice("Chat pinned to top");
+                }}
+                onArchive={(convId) => {
+                  setConversations((prev) => prev.filter((c) => c.id !== convId));
+                  if (selectedId === convId) setSelectedId(null);
+                  showNotice("Chat moved to archive");
+                }}
+                onDeleteChat={(convId) => {
+                  setConversations((prev) => prev.filter((c) => c.id !== convId));
+                  if (selectedId === convId) setSelectedId(null);
+                  showNotice("Chat deleted");
+                }}
+                onBlock={() => {
+                  showNotice("User/Group blocked");
+                }}
+              />
+            )}
           </div>
         </div>
       )}
@@ -765,30 +936,6 @@ function MessengerApp() {
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         onLogout={logout}
-      />
-
-      {/* Group / Contact Details Modal */}
-      <GroupDetailsModal
-        isOpen={isDetailsOpen}
-        conversation={activeConversation}
-        currentUser={currentUser}
-        onClose={() => setIsDetailsOpen(false)}
-        onMembersUpdated={(updatedMembers) => {
-          if (activeConversation) {
-            setConversations((prev) =>
-              prev.map((c) =>
-                c.id === activeConversation.id ? { ...c, members: updatedMembers } : c
-              )
-            );
-          }
-        }}
-        onLeaveGroup={(convId) => {
-          setConversations((prev) => prev.filter((c) => c.id !== convId));
-          if (selectedId === convId) {
-            setSelectedId(null);
-          }
-          showNotice("You left the group");
-        }}
       />
     </main>
   );

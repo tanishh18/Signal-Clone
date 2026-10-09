@@ -9,6 +9,9 @@ interface InChatSearchBarProps {
   query: string;
   onQueryChange: (q: string) => void;
   matchCount: number;
+  activeMatchIndex?: number;
+  onNextMatch?: () => void;
+  onPrevMatch?: () => void;
 }
 
 export const InChatSearchBar: React.FC<InChatSearchBarProps> = ({
@@ -17,6 +20,9 @@ export const InChatSearchBar: React.FC<InChatSearchBarProps> = ({
   query,
   onQueryChange,
   matchCount,
+  activeMatchIndex = 0,
+  onNextMatch,
+  onPrevMatch,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -52,16 +58,35 @@ export const InChatSearchBar: React.FC<InChatSearchBarProps> = ({
         />
         {query && (
           <span className="text-[10px] text-zinc-400 whitespace-nowrap">
-            {matchCount} {matchCount === 1 ? "match" : "matches"}
+            {matchCount > 0 ? `${activeMatchIndex + 1} of ${matchCount}` : "0 matches"}
           </span>
         )}
       </div>
 
       <div className="flex items-center gap-1 text-zinc-400">
         <button
+          onClick={onPrevMatch}
+          disabled={matchCount === 0}
+          className="p-1 hover:text-white hover:bg-[#282828] rounded-md transition-colors disabled:opacity-40"
+          title="Previous match"
+          aria-label="Previous match"
+        >
+          <ChevronUp className="w-4 h-4" />
+        </button>
+        <button
+          onClick={onNextMatch}
+          disabled={matchCount === 0}
+          className="p-1 hover:text-white hover:bg-[#282828] rounded-md transition-colors disabled:opacity-40"
+          title="Next match"
+          aria-label="Next match"
+        >
+          <ChevronDown className="w-4 h-4" />
+        </button>
+        <button
           onClick={onClose}
           className="p-1 hover:text-white hover:bg-[#282828] rounded-md transition-colors"
           title="Close search"
+          aria-label="Close search"
         >
           <X className="w-4 h-4" />
         </button>

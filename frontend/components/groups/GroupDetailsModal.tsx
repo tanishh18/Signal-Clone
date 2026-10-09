@@ -148,15 +148,15 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs select-none">
-      <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-md shadow-2xl border border-zinc-200 dark:border-[#2a2a2a] overflow-hidden flex flex-col max-h-[85vh] relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs select-none">
+      <div className="bg-[#1c1c1c] rounded-3xl w-full max-w-md shadow-2xl border border-[#2a2a2a] overflow-hidden flex flex-col max-h-[85vh] relative text-zinc-100">
         {/* Toast alert */}
         {toast && (
           <div
             className={`absolute top-14 left-1/2 -translate-x-1/2 text-xs px-3.5 py-1.5 rounded-full shadow-lg z-30 transition-all ${
               toast.type === "error"
                 ? "bg-rose-600 text-white"
-                : "bg-zinc-900/90 dark:bg-zinc-100/90 text-white dark:text-zinc-900"
+                : "bg-zinc-800 text-white border border-[#333333]"
             }`}
           >
             {toast.msg}
@@ -164,13 +164,13 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         )}
 
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-zinc-200 dark:border-[#282828] flex items-center justify-between">
-          <h2 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+        <div className="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+          <h2 className="font-bold text-base text-white">
             {isGroup ? "Group Details" : "Contact Details"}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-full transition-colors"
+            className="p-1 text-zinc-400 hover:text-white rounded-full transition-colors"
             aria-label="Close details"
           >
             <X className="w-5 h-5" />
@@ -178,19 +178,19 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         </div>
 
         {/* Profile Card */}
-        <div className="p-5 flex flex-col items-center text-center border-b border-zinc-100 dark:border-[#242424]">
+        <div className="p-6 flex flex-col items-center text-center border-b border-[#262626]">
           <Avatar
             name={conversation.name || "Chat"}
             src={conversation.avatar_url}
             size="xl"
             isGroup={isGroup}
-            className="mb-3"
+            className="mb-3 ring-2 ring-[#282828]"
           />
-          <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+          <h3 className="font-bold text-lg text-white">
             {conversation.name}
           </h3>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-            {isGroup ? `${members.length} members` : "Encrypted direct chat"}
+          <p className="text-xs text-zinc-400 mt-1">
+            {isGroup ? `${members.length} members` : "Signal End-to-End Encrypted"}
           </p>
         </div>
 
