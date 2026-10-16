@@ -253,10 +253,16 @@ function MessengerApp() {
           history.forEach((m) => historyMap.set(m.id, m));
 
           current.forEach((m) => {
-            if (!historyMap.has(m.id)) {
+            if (m.conversation_id === selectedId && !historyMap.has(m.id)) {
               historyMap.set(m.id, m);
             }
           });
+
+          // current.forEach((m) => {
+          //   if (!historyMap.has(m.id)) {
+          //     historyMap.set(m.id, m);
+          //   }
+          // });
 
           return Array.from(historyMap.values()).sort(
             (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -291,6 +297,7 @@ function MessengerApp() {
     }
 
     setSelectedId(id);
+    setMessages((prev) => prev.filter((m) => m.conversation_id === id));
     setActiveSection("chats");
     setIsDetailsOpen(false);
 
@@ -326,8 +333,11 @@ function MessengerApp() {
                 const map = new Map<number, Message>();
                 history.forEach((m) => map.set(m.id, m));
                 current.forEach((m) => {
-                  if (!map.has(m.id)) map.set(m.id, m);
+                  if (m.conversation_id === currentActiveId && !map.has(m.id)) map.set(m.id, m);
                 });
+                // current.forEach((m) => {
+                //   if (!map.has(m.id)) map.set(m.id, m);
+                // });
                 return Array.from(map.values()).sort(
                   (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                 );
